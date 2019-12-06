@@ -164,14 +164,6 @@ class ProxyServer {
       })
 
       newUplink.on('open', () => {
-        if (typeof clientState.uplinkMessageBuffer !== 'undefined' && clientState.uplinkMessageBuffer.length > 0) {
-          log('{${clientState!.id}} Replaying buffered messages:', clientState.uplinkMessageBuffer.length)
-          clientState.uplinkMessageBuffer.forEach(m => {
-            newUplink!.send(m)
-          })
-          clientState.uplinkMessageBuffer = []
-        }
-
         newUplink!.send(JSON.stringify({id: 'NEW_CONNECTION_TEST', command: 'ping'}))
 
         const killNewUplinkTimeout = setTimeout(() => {
@@ -198,6 +190,15 @@ class ProxyServer {
 
             // Uplink emits messages, switch the uplink
             clientState.uplink = newUplink
+
+            // Flush buffer to uplink
+            if (typeof clientState.uplinkMessageBuffer !== 'undefined' && clientState.uplinkMessageBuffer.length > 0) {
+              log(`{${clientState!.id}} Replaying buffered messages:`, clientState.uplinkMessageBuffer.length)
+              clientState.uplinkMessageBuffer.forEach(b => {
+                newUplink!.send(b)
+              })
+              clientState.uplinkMessageBuffer = []
+            }
           } else {
             log(`{${clientState!.id}} ${newUplink!.url} connected, but id expired`
               + ` (got ${newUplink!.getId()}, is at ${clientState.uplinkCount}). Closing.`)
