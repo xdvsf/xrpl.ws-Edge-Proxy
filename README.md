@@ -1,4 +1,4 @@
-# Rippled Edge Proxu
+# Rippled Edge Proxy
 
 ### wss://xrpl.ws
 
