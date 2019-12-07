@@ -1,3 +1,8 @@
-# rippled ws proxy
+# Rippled Edge Proxu
 
-Work in progress...
+### wss://xrpl.ws
+
+XRP ledger full history cluster
+High available, low latency & geographic routing. Provided by trusted XRP community members.
+
+See: https://xrpl.ws/
