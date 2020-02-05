@@ -243,7 +243,8 @@ class ProxyServer {
           'origin': String(req.headers['origin'] || ''),
           'userAgent': String(req.headers['user-agent'] || ''),
           'acceptLanguage': String(req.headers['accept-language'] || ''),
-          'xForwardedFor': String(req.headers['x-forwarded-for'] || '')
+          'xForwardedFor': String(req.headers['x-forwarded-for'] || ''),
+          'requestUrl': String(req.url || '')
         }
       }
       clientState.preferredServer = this.getUplinkServer(clientState)

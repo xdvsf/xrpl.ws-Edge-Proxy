@@ -40,6 +40,7 @@ type Client = {
     'userAgent': string
     'acceptLanguage': string
     'xForwardedFor': string
+    'requestUrl': string
   }
 }
 
