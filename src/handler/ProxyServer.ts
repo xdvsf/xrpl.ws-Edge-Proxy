@@ -67,12 +67,14 @@ class ProxyServer {
   }
 
   addUplinkServer (type: string, uri: string): void {
-    UplinkServers.push({
-      type: type,
-      endpoint: uri,
-      healthy: false,
-      errors: 0
-    })
+    if (this.getUplinkServers().filter(s => s.id === crypto.createHash('md5').update(uri).digest('hex')).length < 1) {
+      UplinkServers.push({
+        type: type,
+        endpoint: uri,
+        healthy: false,
+        errors: 0
+      })
+    }
   }
 
   updateUplinkServer (uplink: string, action: string): void {
