@@ -340,7 +340,7 @@ class ProxyServer {
             log(`{${clientState!.id}} Storing new buffered message`)
           }
 
-          const mLength = Config.get()!.monitoring!.ClientCommandHistory || 10
+          const mLength = Config.get()?.monitoring?.ClientCommandHistory || 10
           clientState!.uplinkLastMessages.unshift(`${clientState!.counters.txCount}:${message}`)
           clientState!.uplinkLastMessages = clientState!.uplinkLastMessages.slice(0, mLength)
         }
