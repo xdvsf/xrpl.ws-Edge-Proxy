@@ -224,7 +224,7 @@ class ProxyServer {
       connectionId++
 
       let ip: string = req.connection.remoteAddress || ''
-      if (String(req.headers['x-forwarded-for']) !== '') {
+      if (typeof req.headers['x-forwarded-for'] !== 'undefined' && String(req.headers['x-forwarded-for']) !== '') {
         ip = String(req.headers['x-forwarded-for'])
       }
 
