@@ -35,6 +35,11 @@ type UplinkServer = {
   id?: string
 }
 
+type ClientSocketError = {
+  error: boolean
+  reason: string
+}
+
 // TODO: ugly, async, etc.
 const UplinkServers: Array<UplinkServer> = Config.get().uplinks.map((u: any) => {
   return Object.assign(u, {
@@ -105,6 +110,22 @@ class ProxyServer {
 
   getClients (): Array<Client> {
     return this.Clients
+  }
+
+  getClientIpCount (ip?: string): Array<string> | number {
+    const clientsByIp = this.Clients.filter(c => {
+      return c.uplinkType === 'basic' && !c.closed && (ip === undefined || ip === c.ip)
+    }).map(c => {
+      return c.ip
+    }).reduce((a: any, b: string) => {
+      return Object.assign(a, {
+        [b]: typeof a[b] === 'undefined' ? 1 : a[b] + 1
+      })
+    }, {})
+
+    return ip === undefined
+      ? clientsByIp
+      : clientsByIp[ip] || 0
   }
 
   getUplinkServer (clientState: Client): string {
@@ -221,12 +242,24 @@ class ProxyServer {
 
   init (): void {
     this.WebSocketServer.on('connection', (ws: WebSocket, req: Request) => {
-      connectionId++
-
       let ip: string = req.connection.remoteAddress || ''
       if (typeof req.headers['x-forwarded-for'] !== 'undefined' && String(req.headers['x-forwarded-for']) !== '') {
         ip = String(req.headers['x-forwarded-for'])
       }
+
+      const clientIpCount: number = Number(this.getClientIpCount(ip)) || 0
+      const maxIpConnectionCount: number = Config.get()?.limits?.ipBasic || 8
+      if (clientIpCount >= maxIpConnectionCount) {
+        const errorBody: ClientSocketError = {
+          error: true,
+          reason: `Connection (public) IP limit reached for ${ip}. Upgrade? https://forms.gle/FsXCvZsX7rapLAso8`
+        }
+        ws.send(JSON.stringify(errorBody))
+        log(`IP ${ip} kicked for exceeding IP limits (${clientIpCount}/${maxIpConnectionCount})`)
+        return ws.close(1008)
+      }
+
+      connectionId++
 
       let clientState: Client | undefined = {
         id: connectionId,
