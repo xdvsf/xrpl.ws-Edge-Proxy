@@ -247,7 +247,8 @@ class ProxyServer {
           'acceptLanguage': String(req.headers['accept-language'] || ''),
           'xForwardedFor': String(req.headers['x-forwarded-for'] || ''),
           'requestUrl': String(req.url || '')
-        }
+        },
+        uplinkLastMessages: []
       }
       clientState.preferredServer = this.getUplinkServer(clientState)
 
@@ -338,6 +339,10 @@ class ProxyServer {
             clientState!.uplinkMessageBuffer.push(message)
             log(`{${clientState!.id}} Storing new buffered message`)
           }
+
+          const mLength = Config.get()!.monitoring!.ClientCommandHistory || 10
+          clientState!.uplinkLastMessages.unshift(`${clientState!.counters.txCount}:${message}`)
+          clientState!.uplinkLastMessages = clientState!.uplinkLastMessages.slice(0, mLength)
         }
       })
 

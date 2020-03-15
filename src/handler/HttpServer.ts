@@ -29,7 +29,8 @@ class HttpServer {
             endpoint: c.uplink
               ? c.uplink!.url
               : null
-          }
+          },
+          uplinkLastMessages: c.uplinkLastMessages
         }
       })
     }

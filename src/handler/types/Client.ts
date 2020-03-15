@@ -41,7 +41,8 @@ type Client = {
     'acceptLanguage': string
     'xForwardedFor': string
     'requestUrl': string
-  }
+  },
+  uplinkLastMessages: string[]
 }
 
 export default Client
