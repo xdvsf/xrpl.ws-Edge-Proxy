@@ -370,8 +370,10 @@ class ProxyServer {
             }
 
             const mLength = Config.get()?.monitoring?.ClientCommandHistory || 10
-            clientState!.uplinkLastMessages.unshift(`${clientState!.counters.txCount}:${message}`)
-            clientState!.uplinkLastMessages = clientState!.uplinkLastMessages.slice(0, mLength)
+            if (message.indexOf('"command":"ping"') < 0) {
+              clientState!.uplinkLastMessages.unshift(`${clientState!.counters.txCount}:${message}`)
+              clientState!.uplinkLastMessages = clientState!.uplinkLastMessages.slice(0, mLength)
+            }
           }
         })
 
