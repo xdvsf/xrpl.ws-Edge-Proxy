@@ -259,155 +259,160 @@ class ProxyServer {
         }
         ws.send(JSON.stringify(errorBody))
         log(`IP ${ip} kicked for exceeding IP limits (${clientIpCount}/${maxIpConnectionCount})`)
-        return ws.close(1008)
-      }
 
-      connectionId++
+        setTimeout(() => {
+          ws.close(1008)
+        }, 200)
 
-      let clientState: Client | undefined = {
-        id: connectionId,
-        closed: false,
-        uplinkType: 'basic',
-        preferredServer: '',
-        socket: ws,
-        request: req,
-        uplinkMessageBuffer: [],
-        uplinkSubscriptions: [],
-        ip: ip,
-        connectMoment: new Date(),
-        counters: {rxCount:0, txCount:0, rxSize:0, txSize: 0, uplinkReconnects: 0},
-        uplinkCount: 0,
-        headers: {
-          'origin': String(req.headers['origin'] || ''),
-          'userAgent': String(req.headers['user-agent'] || ''),
-          'acceptLanguage': String(req.headers['accept-language'] || ''),
-          'xForwardedFor': String(req.headers['x-forwarded-for'] || ''),
-          'requestUrl': String(req.url || '')
-        },
-        uplinkLastMessages: []
-      }
-      clientState.preferredServer = this.getUplinkServer(clientState)
+        return
+      } else {
+        connectionId++
 
-      log(`{${clientState!.id}} New connection from [ ${clientState.ip} ], ` +
-        `origin: [ ${clientState.headers.origin || ''} ]`)
-
-      this.connectUplink(clientState)
-
-      this.Clients.push(clientState)
-      metrics.connections.inc()
-      metrics.clients.set(this.Clients.length)
-
-      // remoteLogger.Store('NEW_CONNECTION', {
-      //  ip: clientState.ip,
-      //  headers: clientState.headers},
-      //  remoteLogger.Severity.INFO
-      // )
-
-      const pingInterval = setInterval(() => {
-        ws.ping()
-        // log('sendping')
-      }, 15 * 1000)
-
-      let pingTimeout: any
-      ws.on('pong', () => {
-        // log('gotpong')
-        clearTimeout(pingTimeout)
-        pingTimeout = setTimeout(() => {
-          log(`{${clientState!.id}} ` + 'No pong for 2 (15 sec) intervals')
-          ws.terminate()
-        }, 2 * 15 * 1000)
-      })
-
-      ws.on('migrate', () => {
-        clientState!.preferredServer = this.getUplinkServer(clientState!)
-        this.connectUplink(clientState!)
-      })
-
-      ws.on('message', (message: string) => {
-        let relayMessage = true
-        logMsg(`{${clientState!.id}} Received request: %s`, message)
-        clientState!.counters.txCount++
-        clientState!.counters.txSize += message.length
-
-        if (message.length <= 1024) {
-          try {
-            const messageJson = JSON.parse(message)
-            if (typeof messageJson.__api !== 'undefined') {
-              relayMessage = false
-              if (messageJson.__api === 'state') {
-                ws.send(JSON.stringify({
-                  endpoint: typeof clientState!.uplink !== 'undefined' ? clientState!.uplink.url : null,
-                  preferredServer: clientState!.preferredServer,
-                  uplinkType: clientState!.uplinkType,
-                  counters: clientState!.counters,
-                  headers: clientState!.headers,
-                  uplinkCount: clientState!.uplinkCount,
-                  connectMoment: clientState!.connectMoment
-                }))
-              }
-              if (messageJson.__api === 'upgrade') {
-                /**
-                 * Todo: verification, payments, ...
-                 */
-                clientState!.uplinkType = 'priority'
-                // clientState.preferredServer = this.getUplinkServer(clientState)
-                // this.connectUplink(clientState)
-                ws.emit('migrate')
-              }
-              if (messageJson.__api === 'downgrade') {
-                clientState!.uplinkType = 'basic'
-                // clientState.preferredServer = this.getUplinkServer(clientState)
-                // this.connectUplink(clientState)
-                ws.emit('migrate')
-              }
-            }
-          } catch (e) {
-            //
-          }
+        let clientState: Client | undefined = {
+          id: connectionId,
+          closed: false,
+          uplinkType: 'basic',
+          preferredServer: '',
+          socket: ws,
+          request: req,
+          uplinkMessageBuffer: [],
+          uplinkSubscriptions: [],
+          ip: ip,
+          connectMoment: new Date(),
+          counters: {rxCount:0, txCount:0, rxSize:0, txSize: 0, uplinkReconnects: 0},
+          uplinkCount: 0,
+          headers: {
+            'origin': String(req.headers['origin'] || ''),
+            'userAgent': String(req.headers['user-agent'] || ''),
+            'acceptLanguage': String(req.headers['accept-language'] || ''),
+            'xForwardedFor': String(req.headers['x-forwarded-for'] || ''),
+            'requestUrl': String(req.url || '')
+          },
+          uplinkLastMessages: []
         }
+        clientState.preferredServer = this.getUplinkServer(clientState)
 
-        if (relayMessage) {
-          if (typeof clientState!.uplink !== 'undefined'
-            && clientState!.uplink.readyState === clientState!.uplink.OPEN) {
-            clientState!.uplink.send(message)
-          } else {
-            // BUFFER MESSAGE
-            clientState!.uplinkMessageBuffer.push(message)
-            log(`{${clientState!.id}} Storing new buffered message`)
-          }
+        log(`{${clientState!.id}} New connection from [ ${clientState.ip} ], ` +
+          `origin: [ ${clientState.headers.origin || ''} ]`)
 
-          const mLength = Config.get()?.monitoring?.ClientCommandHistory || 10
-          clientState!.uplinkLastMessages.unshift(`${clientState!.counters.txCount}:${message}`)
-          clientState!.uplinkLastMessages = clientState!.uplinkLastMessages.slice(0, mLength)
-        }
-      })
+        this.connectUplink(clientState)
 
-      ws.on('close', (code: number, reason: string) => {
-        clientState!.closed = true
+        this.Clients.push(clientState)
+        metrics.connections.inc()
+        metrics.clients.set(this.Clients.length)
 
-        const thisClient = this.Clients.filter(c => {
-          return c.socket === ws
+        // remoteLogger.Store('NEW_CONNECTION', {
+        //  ip: clientState.ip,
+        //  headers: clientState.headers},
+        //  remoteLogger.Severity.INFO
+        // )
+
+        const pingInterval = setInterval(() => {
+          ws.ping()
+          // log('sendping')
+        }, 15 * 1000)
+
+        let pingTimeout: any
+        ws.on('pong', () => {
+          // log('gotpong')
+          clearTimeout(pingTimeout)
+          pingTimeout = setTimeout(() => {
+            log(`{${clientState!.id}} ` + 'No pong for 2 (15 sec) intervals')
+            ws.terminate()
+          }, 2 * 15 * 1000)
         })
 
-        if (thisClient.length === 1) {
-          this.Clients.splice(this.Clients.indexOf(thisClient[0]), 1)
-          metrics.clients.set(this.Clients.length)
-        } else {
-          log(`!!! ERROR! CANNOT SPLICE CLIENTS FOR CLIENT WITH ID [ ${clientState!.id} ]`)
-        }
+        ws.on('migrate', () => {
+          clientState!.preferredServer = this.getUplinkServer(clientState!)
+          this.connectUplink(clientState!)
+        })
 
-        log(`{${clientState!.id}} Closed socket @code`, code, reason)
+        ws.on('message', (message: string) => {
+          let relayMessage = true
+          logMsg(`{${clientState!.id}} Received request: %s`, message)
+          clientState!.counters.txCount++
+          clientState!.counters.txSize += message.length
 
-        if (typeof clientState!.uplink !== 'undefined') {
-          clientState!.uplink.close()
-        }
+          if (message.length <= 1024) {
+            try {
+              const messageJson = JSON.parse(message)
+              if (typeof messageJson.__api !== 'undefined') {
+                relayMessage = false
+                if (messageJson.__api === 'state') {
+                  ws.send(JSON.stringify({
+                    endpoint: typeof clientState!.uplink !== 'undefined' ? clientState!.uplink.url : null,
+                    preferredServer: clientState!.preferredServer,
+                    uplinkType: clientState!.uplinkType,
+                    counters: clientState!.counters,
+                    headers: clientState!.headers,
+                    uplinkCount: clientState!.uplinkCount,
+                    connectMoment: clientState!.connectMoment
+                  }))
+                }
+                if (messageJson.__api === 'upgrade') {
+                  /**
+                   * Todo: verification, payments, ...
+                   */
+                  clientState!.uplinkType = 'priority'
+                  // clientState.preferredServer = this.getUplinkServer(clientState)
+                  // this.connectUplink(clientState)
+                  ws.emit('migrate')
+                }
+                if (messageJson.__api === 'downgrade') {
+                  clientState!.uplinkType = 'basic'
+                  // clientState.preferredServer = this.getUplinkServer(clientState)
+                  // this.connectUplink(clientState)
+                  ws.emit('migrate')
+                }
+              }
+            } catch (e) {
+              //
+            }
+          }
 
-        clearInterval(pingInterval)
-        clearTimeout(pingTimeout)
+          if (relayMessage) {
+            if (typeof clientState!.uplink !== 'undefined'
+              && clientState!.uplink.readyState === clientState!.uplink.OPEN) {
+              clientState!.uplink.send(message)
+            } else {
+              // BUFFER MESSAGE
+              clientState!.uplinkMessageBuffer.push(message)
+              log(`{${clientState!.id}} Storing new buffered message`)
+            }
 
-        clientState!.uplink = undefined
-        clientState = undefined
-      })
+            const mLength = Config.get()?.monitoring?.ClientCommandHistory || 10
+            clientState!.uplinkLastMessages.unshift(`${clientState!.counters.txCount}:${message}`)
+            clientState!.uplinkLastMessages = clientState!.uplinkLastMessages.slice(0, mLength)
+          }
+        })
+
+        ws.on('close', (code: number, reason: string) => {
+          clientState!.closed = true
+
+          const thisClient = this.Clients.filter(c => {
+            return c.socket === ws
+          })
+
+          if (thisClient.length === 1) {
+            this.Clients.splice(this.Clients.indexOf(thisClient[0]), 1)
+            metrics.clients.set(this.Clients.length)
+          } else {
+            log(`!!! ERROR! CANNOT SPLICE CLIENTS FOR CLIENT WITH ID [ ${clientState!.id} ]`)
+          }
+
+          log(`{${clientState!.id}} Closed socket @code`, code, reason)
+
+          if (typeof clientState!.uplink !== 'undefined') {
+            clientState!.uplink.close()
+          }
+
+          clearInterval(pingInterval)
+          clearTimeout(pingTimeout)
+
+          clientState!.uplink = undefined
+          clientState = undefined
+        })
+      } // else: not IP limited
     })
   }
 }
