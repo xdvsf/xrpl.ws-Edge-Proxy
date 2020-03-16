@@ -35,11 +35,6 @@ type UplinkServer = {
   id?: string
 }
 
-type ClientSocketError = {
-  error: boolean
-  reason: string
-}
-
 // TODO: ugly, async, etc.
 const UplinkServers: Array<UplinkServer> = Config.get().uplinks.map((u: any) => {
   return Object.assign(u, {
@@ -253,16 +248,10 @@ class ProxyServer {
       const whitelistedIp: boolean = Object.keys(config?.limits?.ipWhitelist || {}).indexOf(ip) > -1
 
       if (clientIpCount >= maxIpConnectionCount && !whitelistedIp) {
-        const errorBody: ClientSocketError = {
-          error: true,
-          reason: `Connection (public) IP limit reached for ${ip}. Upgrade? https://forms.gle/FsXCvZsX7rapLAso8`
-        }
-        ws.send(JSON.stringify(errorBody))
         log(`IP ${ip} kicked for exceeding IP limits (${clientIpCount}/${maxIpConnectionCount})`)
 
-        setTimeout(() => {
-          ws.close(1008)
-        }, 200)
+        const reason = `Connection (public) IP limit reached for ${ip}. Upgrade? https://forms.gle/FsXCvZsX7rapLAso8`
+        ws.close(1008, reason)
 
         return
       } else {
