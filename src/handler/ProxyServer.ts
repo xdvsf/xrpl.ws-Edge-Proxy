@@ -247,9 +247,12 @@ class ProxyServer {
         ip = String(req.headers['x-forwarded-for'])
       }
 
+      const config = Config.get()
       const clientIpCount: number = Number(this.getClientIpCount(ip)) || 0
-      const maxIpConnectionCount: number = Config.get()?.limits?.ipBasic || 8
-      if (clientIpCount >= maxIpConnectionCount) {
+      const maxIpConnectionCount: number = config?.limits?.ipBasic || 8
+      const whitelistedIp: boolean = Object.keys(config?.limits?.ipWhitelist || {}).indexOf(ip) > -1
+
+      if (clientIpCount >= maxIpConnectionCount && !whitelistedIp) {
         const errorBody: ClientSocketError = {
           error: true,
           reason: `Connection (public) IP limit reached for ${ip}. Upgrade? https://forms.gle/FsXCvZsX7rapLAso8`
