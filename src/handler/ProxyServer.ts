@@ -181,6 +181,10 @@ class ProxyServer {
         }, 5000)
       })
 
+      newUplink.on('error', e => {
+        log(`!!! newUplink error`, e.message)
+      })
+
       newUplink.on('open', () => {
         newUplink!.send(JSON.stringify({id: 'NEW_CONNECTION_TEST', command: 'ping'}))
 
@@ -236,6 +240,10 @@ class ProxyServer {
   }
 
   init (): void {
+    this.WebSocketServer.on('error', (e: any) => {
+      log(`!!! WebSocketServer error`, e)
+    })
+
     this.WebSocketServer.on('connection', (ws: WebSocket, req: Request) => {
       let ip: string = req.connection.remoteAddress || ''
       if (typeof req.headers['x-forwarded-for'] !== 'undefined' && String(req.headers['x-forwarded-for']) !== '') {
@@ -375,6 +383,10 @@ class ProxyServer {
               clientState!.uplinkLastMessages = clientState!.uplinkLastMessages.slice(0, mLength)
             }
           }
+        })
+
+        ws.on('error', e => {
+          log(`!!! ws error`, e)
         })
 
         ws.on('close', (code: number, reason: string) => {
