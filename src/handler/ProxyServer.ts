@@ -142,7 +142,7 @@ class ProxyServer {
 
   connectUplink (clientState: Client): void {
     if (typeof clientState.uplink !== 'undefined') {
-      if (clientState.uplink.url === clientState.preferredServer) {
+      if (clientState.uplink?.url === clientState.preferredServer) {
         return
       }
     }
@@ -153,7 +153,7 @@ class ProxyServer {
        */
       newUplink.on('gone', () => {
         const thisUplink = UplinkServers.filter((r: any) => {
-          return r.endpoint === newUplink!.url
+          return r.endpoint === newUplink?.url
         })
         if (thisUplink.length === 1) {
           thisUplink[0].errors++
@@ -195,7 +195,7 @@ class ProxyServer {
           } catch (e) {
             // Do nothing
           }
-          log(`{${clientState!.id}} !!! No incoming message within 10 sec from new uplink ${newUplink!.url}, close`)
+          log(`{${clientState!.id}} !!! No incoming message within 10 sec from new uplink ${newUplink?.url}, close`)
         }, 10 * 1000)
 
         newUplink!.once('message', m => {
@@ -205,7 +205,7 @@ class ProxyServer {
           if (clientState.uplinkCount === newUplink!.getId()) {
             if (typeof clientState.uplink !== 'undefined') {
               log(`{${clientState!.id}} Switch uplinks. ` +
-                `${clientState.uplink.url} disconnects, ${newUplink!.url} connects`)
+                `${clientState.uplink?.url} disconnects, ${newUplink?.url} connects`)
               clientState.uplink.close(0, 'ON_PURPOSE')
               clientState.uplink = undefined
             }
@@ -222,7 +222,7 @@ class ProxyServer {
               clientState.uplinkMessageBuffer = []
             }
           } else {
-            log(`{${clientState!.id}} ${newUplink!.url} connected, but id expired`
+            log(`{${clientState!.id}} ${newUplink?.url} connected, but id expired`
               + ` (got ${newUplink!.getId()}, is at ${clientState.uplinkCount}). Closing.`)
             try {
               newUplink!.close(0, 'ON_PURPOSE')
@@ -283,7 +283,7 @@ class ProxyServer {
             'userAgent': String(req.headers['user-agent'] || ''),
             'acceptLanguage': String(req.headers['accept-language'] || ''),
             'xForwardedFor': String(req.headers['x-forwarded-for'] || ''),
-            'requestUrl': String(req.url || '')
+            'requestUrl': String(req?.url || '')
           },
           uplinkLastMessages: []
         }
@@ -337,7 +337,7 @@ class ProxyServer {
                 relayMessage = false
                 if (messageJson.__api === 'state') {
                   ws.send(JSON.stringify({
-                    endpoint: typeof clientState!.uplink !== 'undefined' ? clientState!.uplink.url : null,
+                    endpoint: typeof clientState!.uplink !== 'undefined' ? clientState!.uplink?.url : null,
                     preferredServer: clientState!.preferredServer,
                     uplinkType: clientState!.uplinkType,
                     counters: clientState!.counters,
