@@ -139,13 +139,21 @@ export default (message: string, clientState: Client | undefined, send: Function
      * Block fee > 1 XRP
      */
     if (typeof decodedTransaction.Fee === 'string') {
+      let feeLimit: number = 1000000 // 1 XRP
       let feeDrops: number = 0
       try {
         feeDrops = Number(decodedTransaction.Fee)
       } catch (e) {
         //
       }
-      if (feeDrops >= 1000000) {
+
+      if (typeof decodedTransaction.TransactionType === 'string') {
+        if (decodedTransaction.TransactionType === 'AccountDelete') {
+          feeLimit = 10000000 // 10 XRP
+        }
+      }
+
+      if (feeDrops >= feeLimit) {
         if (clientState !== undefined) {
           Object.assign(filteredByFee, {
             [clientState.ip]: typeof filteredByFee[clientState.ip] !== 'undefined'
