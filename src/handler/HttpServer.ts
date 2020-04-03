@@ -4,6 +4,7 @@ import Debug from 'debug'
 import {ProxyServer} from './'
 import {Client} from './types'
 import {Request, Response} from 'express'
+import {Stats as ProxyMessageFilterStats} from './ProxyMessageFilter'
 const log = Debug('app').extend('HttpServer')
 const logAdmin = log.extend('Admin')
 
@@ -91,7 +92,8 @@ class HttpServer {
           },
           uplinks: proxy.getUplinkServers(),
           count: proxy.getClients().length,
-          clientDetails: getClientMap(proxy.getClients(), req)
+          clientDetails: getClientMap(proxy.getClients(), req),
+          filter: ProxyMessageFilterStats
         }
       })
     })

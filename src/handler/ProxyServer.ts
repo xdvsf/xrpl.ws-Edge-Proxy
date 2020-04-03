@@ -11,6 +11,7 @@ import {Request} from 'express'
 import {UplinkClient} from './'
 import {Client} from './types'
 import io from '@pm2/io'
+import ProxyMessageFilter from './ProxyMessageFilter'
 
 let connectionId = 0
 
@@ -200,6 +201,20 @@ class ProxyServer {
 
         newUplink!.once('message', m => {
           log(`{${clientState!.id}} >> Got first message from uplink. First health check OK.`)
+
+          /**
+           * TODO: Opt in notify connected client with 'pseudo messages'
+           * Only based on path or header, to prevent clients from breaking
+           * if they actively check for rippled responses. Suggestion:
+           * passthrough @ clientState (based on req » param / query)
+           */
+
+          // try {
+          //   clientState.socket.send(JSON.stringify({
+          //     state: 'CONNECTED'
+          //   }))
+          // } catch (e) {}
+
           clearTimeout(killNewUplinkTimeout)
 
           if (clientState.uplinkCount === newUplink!.getId()) {
@@ -217,7 +232,9 @@ class ProxyServer {
             if (typeof clientState.uplinkMessageBuffer !== 'undefined' && clientState.uplinkMessageBuffer.length > 0) {
               log(`{${clientState!.id}} Replaying buffered messages:`, clientState.uplinkMessageBuffer.length)
               clientState.uplinkMessageBuffer.forEach(b => {
-                newUplink!.send(b)
+                ProxyMessageFilter(b, clientState, (safeData: string): void => {
+                  newUplink!.send(safeData)
+                })
               })
               clientState.uplinkMessageBuffer = []
             }
@@ -370,7 +387,9 @@ class ProxyServer {
           if (relayMessage) {
             if (typeof clientState!.uplink !== 'undefined'
               && clientState!.uplink.readyState === clientState!.uplink.OPEN) {
-              clientState!.uplink.send(message)
+              ProxyMessageFilter(message, clientState, (safeData: string): void => {
+                clientState!.uplink!.send(safeData)
+              })
             } else {
               // BUFFER MESSAGE
               clientState!.uplinkMessageBuffer.push(message)
