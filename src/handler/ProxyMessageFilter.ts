@@ -139,7 +139,7 @@ export default (message: string, clientState: Client | undefined, send: Function
      * Block fee > 1 XRP
      */
     if (typeof decodedTransaction.Fee === 'string') {
-      let feeLimit: number = 1000000 // 1 XRP
+      let feeLimit: number = 2000000 // 2 XRP
       let feeDrops: number = 0
       try {
         feeDrops = Number(decodedTransaction.Fee)
