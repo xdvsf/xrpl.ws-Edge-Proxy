@@ -4,6 +4,7 @@ import Debug from 'debug'
 import {Client} from './types'
 import fetch from 'node-fetch'
 import Codec from 'ripple-binary-codec'
+import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'
 
 const log = Debug('app').extend('filter')
 
@@ -101,6 +102,10 @@ export default (
         if (txHex.match(/^[A-F0-9]+$/)) {
           try {
             Object.assign(decodedTransaction, Codec.decode(txHex))
+            SDLogger('Submit transaction', {
+              ip: clientState?.ip,
+              transaction: decodedTransaction
+            }, SDLoggerSeverity.NOTICE)
           } catch (e) {
             log(`Error decoding SUBMIT transaction hex: ${e.message}`)
           }
@@ -202,6 +207,12 @@ export default (
     }
 
     // log('msg, mocked', mockedResponse)
+    SDLogger('Reject transaction', {
+      ip: clientState?.ip,
+      transaction: decodedTransaction,
+      reason: e.message
+    }, SDLoggerSeverity.WARNING)
+
     reject(JSON.stringify(mockedResponse))
 
     return false
