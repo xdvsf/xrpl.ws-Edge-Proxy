@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import Debug from 'debug'
 import WebSocket from 'ws'
 const log = Debug('app')
-const logMsg = log.extend('msg')
+const logMsg = Debug('msg')
 import * as remoteLogger from '../logging'
 import * as Config from '../config'
 import {Request} from 'express'

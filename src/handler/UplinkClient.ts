@@ -3,7 +3,7 @@
 import Debug from 'debug'
 import WebSocket from 'ws'
 const log = Debug('app')
-const logMsg = log.extend('msg')
+const logMsg = Debug('msg')
 import {Client} from './types'
 import io from '@pm2/io'
 

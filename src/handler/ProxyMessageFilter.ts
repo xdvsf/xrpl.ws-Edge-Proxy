@@ -5,7 +5,7 @@ import {Client} from './types'
 import fetch from 'node-fetch'
 import Codec from 'ripple-binary-codec'
 
-const log = Debug('app').extend('msg:filter')
+const log = Debug('app').extend('filter')
 
 log('Init Proxy MessageFilter')
 
