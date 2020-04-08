@@ -234,6 +234,8 @@ class ProxyServer {
               clientState.uplinkMessageBuffer.forEach(b => {
                 ProxyMessageFilter(b, clientState, (safeData: string): void => {
                   newUplink!.send(safeData)
+                }, (mockedResponse: string): void => {
+                  clientState?.socket?.send(mockedResponse)
                 })
               })
               clientState.uplinkMessageBuffer = []
@@ -389,6 +391,8 @@ class ProxyServer {
               && clientState!.uplink.readyState === clientState!.uplink.OPEN) {
               ProxyMessageFilter(message, clientState, (safeData: string): void => {
                 clientState!.uplink!.send(safeData)
+              }, (mockedResponse: string): void => {
+                clientState?.socket?.send(mockedResponse)
               })
             } else {
               // BUFFER MESSAGE

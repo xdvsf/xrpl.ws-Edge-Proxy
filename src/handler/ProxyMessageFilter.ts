@@ -73,15 +73,21 @@ export const Stats = {
   filteredByFee
 }
 
-export default (message: string, clientState: Client | undefined, send: Function): boolean => {
-  try {
-    const messageObject: StringMapAny = {}
-    const decodedTransaction: StringMapAny = {}
-    const data = {
-      messageString: message.toString().trim(),
-      messageObject
-    }
+export default (
+  message: string,
+  clientState: Client | undefined,
+  send: Function,
+  reject: Function
+): boolean => {
+  const messageObject: StringMapAny = {}
+  const decodedTransaction: StringMapAny = {}
 
+  const data = {
+    messageString: message.toString().trim(),
+    messageObject
+  }
+
+  try {
     if (data.messageString.slice(0, 1) === '{' && data.messageString.slice(-1) === '}') {
       // Basic check: valid JSON
       data.messageObject = JSON.parse(data.messageString)
@@ -159,11 +165,6 @@ export default (message: string, clientState: Client | undefined, send: Function
         throw new Error(`FEE ${feeDrops} EXCEEDS FEE LIMIT`)
       }
     }
-
-    log('Relaying filtered (but apparently OK) UplinkClient Data')
-    send(message)
-
-    return true
   } catch (e) {
     Stats.filteredCount++
     if (clientState !== undefined) {
@@ -174,18 +175,42 @@ export default (message: string, clientState: Client | undefined, send: Function
       })
     }
 
-    log(`Message Filter Error: ${e.message}`)
+    log(`SUBMIT message filtered: ${e.message}`)
 
-    const fakeMessage = {
-      ProxyMessageFiltered: true,
-      Reason: e.message
+    const mockedResponse = {
+      result: {
+        accepted: false,
+        applied: false,
+        broadcast: false,
+        engine_result: 'telLOCAL_ERROR',
+        engine_result_code: -399,
+        engine_result_message: 'Local failure: ' + e.message,
+        kept: false,
+        queued: false
+      },
+      status: 'success',
+      type: 'response'
     }
 
-    send(JSON.stringify(fakeMessage))
+    if (typeof data.messageObject === 'object' && data.messageObject !== null) {
+      if (typeof data.messageObject.id !== 'undefined') {
+        Object.assign(mockedResponse, {id: data.messageObject.id})
+      }
+      if (typeof data.messageObject.tx_blob !== 'undefined') {
+        Object.assign(mockedResponse.result, {tx_blob: data.messageObject.tx_blob})
+      }
+    }
+
+    // log('msg, mocked', mockedResponse)
+    reject(JSON.stringify(mockedResponse))
+
+    return false
   }
 
-  return false
+  log('Relaying filtered (but apparently OK) UplinkClient Data', message, decodedTransaction)
+  send(message)
+  return true
 }
 
 updateAdvisory()
-setTimeout(updateAdvisory, 60 * 5 * 1000)
+setInterval(updateAdvisory, 60 * 5 * 1000) // 5 minutes
