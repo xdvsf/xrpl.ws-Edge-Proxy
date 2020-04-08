@@ -207,7 +207,7 @@ export default (
     return false
   }
 
-  log('Relaying filtered (but apparently OK) UplinkClient Data', message, decodedTransaction)
+  // log('Relaying filtered (but apparently OK) UplinkClient Data', message, decodedTransaction)
   send(message)
   return true
 }
