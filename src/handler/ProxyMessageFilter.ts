@@ -53,12 +53,6 @@ const updateAdvisory = async () => {
     advisoryData.updating = false
 
     Object.assign(advisoryData.accounts, json)
-    Object.assign(advisoryData.accounts, {
-      ra5nK24KXen9AHvsdFTKHSANinZseWnPcX: {
-        address: 'ra5nK24KXen9AHvsdFTKHSANinZseWnPcX',
-        status: 3
-      }
-    })
 
     log(`Updated advisory data: ${Object.keys(json).length} accounts`)
     // log(json)
