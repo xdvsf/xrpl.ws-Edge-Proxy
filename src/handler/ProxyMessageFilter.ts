@@ -102,10 +102,11 @@ export default (
         if (txHex.match(/^[A-F0-9]+$/)) {
           try {
             Object.assign(decodedTransaction, Codec.decode(txHex))
-            SDLogger('Submit transaction', {
-              ip: clientState?.ip,
-              transaction: decodedTransaction
-            }, SDLoggerSeverity.NOTICE)
+            // No overall TX logging
+            // SDLogger('Submit transaction', {
+            //   ip: clientState?.ip,
+            //   transaction: decodedTransaction
+            // }, SDLoggerSeverity.NOTICE)
           } catch (e) {
             log(`Error decoding SUBMIT transaction hex: ${e.message}`)
           }
@@ -119,7 +120,7 @@ export default (
      * Block blacklisted accounts (Advisory)
      */
     if (typeof decodedTransaction.Destination === 'string') {
-      // It's a transaction TO someone.
+      // It's a transaction TO someone (trying to send to a scammer)
       if (typeof advisoryAccounts[decodedTransaction.Destination] === 'object' &&
         advisoryAccounts[decodedTransaction.Destination] !== null &&
         typeof advisoryAccounts[decodedTransaction.Destination].address === 'string' &&
@@ -128,6 +129,7 @@ export default (
         const address = advisoryAccounts[decodedTransaction.Destination].address
         const status = advisoryAccounts[decodedTransaction.Destination].status
 
+        // Stats counter
         Object.assign(filteredByDestination, {
           [decodedTransaction.Destination]: typeof filteredByDestination[decodedTransaction.Destination] !== 'undefined'
             ? filteredByDestination[decodedTransaction.Destination] + 1
@@ -136,6 +138,22 @@ export default (
 
         if (status >= 3) {
           throw new Error(`DESTINATION ACCOUNT ${address} FOUND IN ADVISORY, level ${status}`)
+        }
+      }
+    }
+
+    if (typeof decodedTransaction.Account === 'string') {
+      // It's a transaction FROM someone (scammer trying to send something)
+      if (typeof advisoryAccounts[decodedTransaction.Account] === 'object' &&
+        advisoryAccounts[decodedTransaction.Account] !== null &&
+        typeof advisoryAccounts[decodedTransaction.Account].address === 'string' &&
+        typeof advisoryAccounts[decodedTransaction.Account].status === 'number'
+      ) {
+        const address = advisoryAccounts[decodedTransaction.Account].address
+        const status = advisoryAccounts[decodedTransaction.Account].status
+
+        if (status >= 1) {
+          throw new Error(`ACCOUNT ${address} FOUND IN ADVISORY, level ${status}`)
         }
       }
     }

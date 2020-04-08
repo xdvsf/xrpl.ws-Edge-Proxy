@@ -1,6 +1,5 @@
 'use strict'
 
-import {hostname} from 'os'
 import crypto from 'crypto'
 import Debug from 'debug'
 import WebSocket from 'ws'
@@ -310,12 +309,12 @@ class ProxyServer {
         }
         clientState.preferredServer = this.getUplinkServer(clientState)
 
-        SDLogger('Connection', {
-          ip: clientState?.ip,
-          headers: clientState?.headers,
-          preferredServer: clientState?.preferredServer,
-          hostname: hostname()
-        }, SDLoggerSeverity.INFO)
+        // No overall Connection logging
+        // SDLogger('Connection', {
+        //   ip: clientState?.ip,
+        //   headers: clientState?.headers,
+        //   preferredServer: clientState?.preferredServer
+        // }, SDLoggerSeverity.INFO)
 
         log(`{${clientState!.id}} New connection from [ ${clientState.ip} ], ` +
           `origin: [ ${clientState.headers.origin || ''} ]`)
