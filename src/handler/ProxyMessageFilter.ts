@@ -227,6 +227,7 @@ export default (
     // log('msg, mocked', mockedResponse)
     SDLogger('Reject transaction', {
       ip: clientState?.ip,
+      headers: clientState?.headers,
       transaction: decodedTransaction,
       reason: e.message
     }, SDLoggerSeverity.WARNING)
