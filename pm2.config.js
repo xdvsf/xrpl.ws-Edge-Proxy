@@ -3,7 +3,9 @@ module.exports = {
     name: 'RIPPLEDWSPROXY',
     script: 'dist/index.js',
     watch: false,
-    instances: 1, // NOTE: admin should report <all instance info>
+    instances: 1, // TODO: admin should report <all instance info>
+    autorestart: false,
+    max_memory_restart: '2000M',
     exec_mode: 'cluster',
     ignore_watch: ["node_modules", "db", ".git"],
     env: {
