@@ -418,6 +418,7 @@ class ProxyServer {
 
         ws.on('error', e => {
           log(`!!! ws error`, e)
+          ws.close()
         })
 
         ws.on('close', (code: number, reason: string) => {
