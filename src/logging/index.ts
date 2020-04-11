@@ -32,7 +32,7 @@ if (typeof config.stackdriver !== 'undefined') {
 
 const Store = async (text: string = '', data: Object = {}, severity:Severity = Severity.DEFAULT): Promise<void> => {
   if (glog) {
-    const metadata = {severity: severity}
+    const metadata = {severity: Severity[severity]}
     const entry = glog.entry(metadata, Object.assign({text: text}, Object.assign(data, {hostname})))
 
     await glog.write(entry, {resource: {type: 'global'}})
