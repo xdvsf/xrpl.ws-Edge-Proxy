@@ -195,7 +195,7 @@ class ProxyServer {
             newUplink!.close(0, 'ON_PURPOSE')
             newUplink = undefined
           } catch (e) {
-            // Do nothing
+            log('X1', e)
           }
           log(`{${clientState!.id}} !!! No incoming message within 10 sec from new uplink ${newUplink?.url}, close`)
         }, 10 * 1000)
@@ -247,7 +247,7 @@ class ProxyServer {
             try {
               newUplink!.close(0, 'ON_PURPOSE')
             } catch (e) {
-              // Do nothing
+              log('X2', e)
             }
           }
         })
@@ -279,7 +279,18 @@ class ProxyServer {
         log(`IP ${ip} kicked for exceeding IP limits (${clientIpCount}/${maxIpConnectionCount})`)
 
         const reason = `Connection (public) IP limit reached for ${ip}. Upgrade? https://forms.gle/FsXCvZsX7rapLAso8`
-        ws.close(1008, reason)
+
+        SDLogger('RateLimit', {
+          ip,
+          rawHeaders: req.headers,
+          ipLimit: true
+        }, SDLoggerSeverity.ALERT)
+
+        try {
+          ws.close(1008, reason)
+        } catch (e) {
+          log('X4', e)
+        }
 
         return
       } else {
@@ -310,11 +321,11 @@ class ProxyServer {
         clientState.preferredServer = this.getUplinkServer(clientState)
 
         // No overall Connection logging
-        // SDLogger('Connection', {
-        //   ip: clientState?.ip,
-        //   headers: clientState?.headers,
-        //   preferredServer: clientState?.preferredServer
-        // }, SDLoggerSeverity.INFO)
+        SDLogger('Connection', {
+          ip: clientState?.ip,
+          headers: clientState?.headers,
+          preferredServer: clientState?.preferredServer
+        }, SDLoggerSeverity.INFO)
 
         log(`{${clientState!.id}} New connection from [ ${clientState.ip} ], ` +
           `origin: [ ${clientState.headers.origin || ''} ]`)
@@ -324,12 +335,6 @@ class ProxyServer {
         this.Clients.push(clientState)
         metrics.connections.inc()
         metrics.clients.set(this.Clients.length)
-
-        // remoteLogger.Store('NEW_CONNECTION', {
-        //  ip: clientState.ip,
-        //  headers: clientState.headers},
-        //  remoteLogger.Severity.INFO
-        // )
 
         const pingInterval = setInterval(() => {
           ws.ping()
@@ -390,7 +395,7 @@ class ProxyServer {
                 }
               }
             } catch (e) {
-              //
+              log('X3', e)
             }
           }
 

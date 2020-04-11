@@ -88,6 +88,11 @@ export default (
     messageObject
   }
 
+  SDLogger('WS Message (command)', {
+    ip: clientState?.ip,
+    message: data.messageString
+  }, SDLoggerSeverity.NOTICE)
+
   try {
     if (data.messageString.slice(0, 1) === '{' && data.messageString.slice(-1) === '}') {
       // Basic check: valid JSON
@@ -103,10 +108,10 @@ export default (
           try {
             Object.assign(decodedTransaction, Codec.decode(txHex))
             // No overall TX logging
-            // SDLogger('Submit transaction', {
-            //   ip: clientState?.ip,
-            //   transaction: decodedTransaction
-            // }, SDLoggerSeverity.NOTICE)
+            SDLogger('Submit transaction', {
+              ip: clientState?.ip,
+              transaction: decodedTransaction
+            }, SDLoggerSeverity.INFO)
           } catch (e) {
             log(`Error decoding SUBMIT transaction hex: ${e.message}`)
           }
