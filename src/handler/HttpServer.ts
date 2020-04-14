@@ -31,7 +31,29 @@ class HttpServer {
               ? c.uplink!.url
               : null
           },
-          uplinkLastMessages: c.uplinkLastMessages
+          uplinkLastMessages: c.uplinkLastMessages,
+          submitClient: {
+            connected: c.submitClient !== undefined,
+            details: c.submitClient === undefined
+              ? {}
+              : {
+                id: c.submitClient.id,
+                uptime: Math.ceil((new Date().getTime() - c.submitClient.connectMoment.getTime()) / 1000),
+                uplinkCount: c.submitClient.uplinkCount,
+                counters: {
+                  messages: c.submitClient.counters,
+                  state: {
+                    queue: this.lengthOrDetails(c.submitClient.uplinkMessageBuffer, req)
+                  }
+                },
+                uplink: {
+                  state: c.submitClient.socket.readyState,
+                  endpoint: c.submitClient.uplink
+                    ? c.submitClient.uplink!.url
+                    : null
+                }
+              }
+          }
         }
       })
     }

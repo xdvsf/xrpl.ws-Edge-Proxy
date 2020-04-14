@@ -125,6 +125,80 @@ class ProxyServer {
       : clientsByIp[ip] || 0
   }
 
+  createSubmitClient (clientState: Client): Client {
+    const submitClient: Client = {
+      id: connectionId,
+      closed: false,
+      uplinkType: 'submit',
+      preferredServer: '',
+      socket: clientState.socket,
+      request: clientState.request,
+      uplinkMessageBuffer: [],
+      uplinkSubscriptions: [],
+      ip: clientState.ip,
+      connectMoment: new Date(),
+      counters: {rxCount:0, txCount:0, rxSize:0, txSize: 0, uplinkReconnects: 0},
+      uplinkCount: 0,
+      headers: {
+        'origin': String(clientState.request.headers['origin'] || ''),
+        'userAgent': String(clientState.request.headers['user-agent'] || ''),
+        'acceptLanguage': String(clientState.request.headers['accept-language'] || ''),
+        'xForwardedFor': String(clientState.request.headers['x-forwarded-for'] || ''),
+        'requestUrl': String(clientState.request?.url || '')
+      },
+      uplinkLastMessages: []
+    }
+
+    submitClient.preferredServer = this.getUplinkServer(submitClient)
+    this.connectUplink(submitClient)
+
+    return submitClient
+  }
+
+  submitTransaction (clientState: Client, submitMessage: string): void {
+    if (clientState !== undefined) {
+      if (typeof clientState.submitClient === 'undefined') {
+        clientState.submitClient = this.createSubmitClient(clientState)
+        // setInterval(() => {
+        //   if (clientState !== undefined) {
+        //     if (clientState.submitClient !== undefined) {
+        //       log('submitClient', Object.assign({}, {
+        //         id: clientState.submitClient.id,
+        //         closed: clientState.submitClient.closed,
+        //         uplinkType: clientState.submitClient.uplinkType,
+        //         preferredServer: clientState.submitClient.preferredServer,
+        //         uplinkMessageBuffer: clientState.submitClient.uplinkMessageBuffer,
+        //         connectMoment: clientState.submitClient.connectMoment,
+        //         counters: clientState.submitClient.counters,
+        //         uplinkCount: clientState.submitClient.uplinkCount,
+        //         uplinkLastMessages: clientState.submitClient.uplinkLastMessages
+        //       }))
+        //     } else {
+        //       log('clientState.submitClient UNDEFINED')
+        //     }
+        //   } else {
+        //     log('clientState UNDEFINED')
+        //   }
+        // }, 3000)
+      }
+      if (typeof clientState.submitClient!.uplink !== 'undefined'
+        && clientState.submitClient!.uplink.readyState === clientState.submitClient!.uplink.OPEN) {
+          clientState.submitClient.uplink!.send(submitMessage)
+      } else {
+        clientState.submitClient!.uplinkMessageBuffer.push(submitMessage)
+        log(`{${clientState.submitClient!.id}} Storing new buffered message`)
+      }
+
+      const mLength = Config.get()?.monitoring?.ClientCommandHistory || 10
+      if (submitMessage.indexOf('"command":"ping"') < 0) {
+        clientState.submitClient!.uplinkLastMessages.unshift(
+          `${clientState.submitClient!.counters.txCount}:${submitMessage}`
+        )
+        clientState.submitClient!.uplinkLastMessages = clientState.submitClient!.uplinkLastMessages.slice(0, mLength)
+      }
+    }
+  }
+
   getUplinkServer (clientState: Client): string {
     const possibleServers: string[] = UplinkServers.filter((r: any) => {
       return r.healthy === true && r.type === clientState.uplinkType.toLowerCase()
@@ -233,11 +307,21 @@ class ProxyServer {
             if (typeof clientState.uplinkMessageBuffer !== 'undefined' && clientState.uplinkMessageBuffer.length > 0) {
               log(`{${clientState!.id}} Replaying buffered messages:`, clientState.uplinkMessageBuffer.length)
               clientState.uplinkMessageBuffer.forEach(b => {
-                ProxyMessageFilter(b, clientState, (safeData: string): void => {
-                  newUplink!.send(safeData)
-                }, (mockedResponse: string): void => {
-                  clientState?.socket?.send(mockedResponse)
-                })
+                ProxyMessageFilter(
+                  b,
+                  clientState,
+                  {
+                    send (safeData: string): void {
+                      newUplink!.send(safeData)
+                    },
+                    submit: (safeData: string): void => {
+                      this.submitTransaction(clientState, safeData)
+                    },
+                    reject (mockedResponse: string): void {
+                      clientState?.socket?.send(mockedResponse)
+                    }
+                  }
+                )
               })
               clientState.uplinkMessageBuffer = []
             }
@@ -395,18 +479,30 @@ class ProxyServer {
                 }
               }
             } catch (e) {
-              log('X3', e)
+              if (e.message !== 'Unexpected end of JSON input') {
+                log('X3', e)
+              }
             }
           }
 
           if (relayMessage) {
             if (typeof clientState!.uplink !== 'undefined'
               && clientState!.uplink.readyState === clientState!.uplink.OPEN) {
-              ProxyMessageFilter(message, clientState, (safeData: string): void => {
-                clientState!.uplink!.send(safeData)
-              }, (mockedResponse: string): void => {
-                clientState?.socket?.send(mockedResponse)
-              })
+              ProxyMessageFilter(
+                message,
+                clientState,
+                {
+                  send (safeData: string): void {
+                    clientState!.uplink!.send(safeData)
+                  },
+                  submit: (safeData: string): void => {
+                    this.submitTransaction(clientState!, safeData)
+                  },
+                  reject (mockedResponse: string): void {
+                    clientState?.socket?.send(mockedResponse)
+                  }
+                }
+              )
             } else {
               // BUFFER MESSAGE
               clientState!.uplinkMessageBuffer.push(message)
@@ -449,8 +545,21 @@ class ProxyServer {
           clearInterval(pingInterval)
           clearTimeout(pingTimeout)
 
-          clientState!.uplink = undefined
-          clientState = undefined
+          if (typeof clientState!.submitClient !== 'undefined') {
+            clientState!.submitClient.closed = true
+            if (typeof clientState!.submitClient!.uplink !== 'undefined') {
+              clientState!.submitClient!.uplink.close()
+            }
+            setTimeout(() => {
+              clientState!.submitClient!.uplink = undefined
+              clientState!.submitClient = undefined
+            }, 500)
+          }
+
+          setTimeout(() => {
+            clientState!.uplink = undefined
+            clientState = undefined
+          }, 1000)
         })
       } // else: not IP limited
     })

@@ -74,11 +74,16 @@ export const Stats = {
   filteredByFee
 }
 
+type FilterCallbacks = {
+  send: Function
+  submit: Function
+  reject: Function
+}
+
 export default (
   message: string,
   clientState: Client | undefined,
-  send: Function,
-  reject: Function
+  callback: FilterCallbacks
 ): boolean => {
   const messageObject: StringMapAny = {}
   const decodedTransaction: StringMapAny = {}
@@ -237,13 +242,38 @@ export default (
       reason: e.message
     }, SDLoggerSeverity.WARNING)
 
-    reject(JSON.stringify(mockedResponse))
+    callback.reject(JSON.stringify(mockedResponse))
 
     return false
   }
 
-  // log('Relaying filtered (but apparently OK) UplinkClient Data', message, decodedTransaction)
-  send(message)
+  if (
+    typeof decodedTransaction.TransactionType !== 'undefined'
+    // Don't apply logic if connection is already of submit type (prevent endless recursion)
+    && clientState?.uplinkType !== 'submit'
+  ) {
+    // If decodedTransaction is filled, it's a Submit transaction
+    // Send to Submit (sub proxy) logic
+
+    // log(
+    //   'Relaying filtered (but apparently OK) UplinkClient <<< TRANSACTION >>> Data',
+    //   message,
+    //   decodedTransaction
+    // )
+
+    callback.submit(message)
+  } else {
+    // Send to FH server
+
+    // log(
+    //   'Relaying filtered (but apparently OK) UplinkClient <<< NON-TRANSACTION (SUBMIT) >>> Data',
+    //   message,
+    //   decodedTransaction
+    // )
+
+    callback.send(message)
+  }
+
   return true
 }
 

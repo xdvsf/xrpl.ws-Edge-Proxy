@@ -22,6 +22,7 @@ type Client = {
   preferredServer: string
   socket: WebSocket
   uplink?: UplinkClient
+  submitClient?: Client
   uplinkCount: number
   uplinkMessageBuffer: string[]
   uplinkSubscriptions: Subscription[]
