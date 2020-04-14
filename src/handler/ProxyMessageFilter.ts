@@ -108,11 +108,12 @@ export default (
           if (txHex.match(/^[A-F0-9]+$/)) {
             try {
               Object.assign(decodedTransaction, Codec.decode(txHex))
-              // No overall TX logging
-              SDLogger('TX Submit JSON', {
-                ip: clientState?.ip,
-                transaction: decodedTransaction
-              }, SDLoggerSeverity.INFO)
+              if (clientState?.uplinkType !== 'submit') {
+                SDLogger('TX Submit JSON', {
+                  ip: clientState?.ip,
+                  transaction: decodedTransaction
+                }, SDLoggerSeverity.INFO)
+              }
             } catch (e) {
               log(`Error decoding SUBMIT transaction hex: ${e.message}`)
             }
