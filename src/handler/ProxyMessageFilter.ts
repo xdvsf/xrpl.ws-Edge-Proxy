@@ -101,13 +101,6 @@ export default (
       if (typeof data.messageObject === 'object' &&
         typeof data.messageObject.command !== 'undefined'
       ) {
-        if (data.messageObject.command !== 'ping') {
-          SDLogger('WS Message (command)', {
-            ip: clientState?.ip,
-            data: data.messageObject
-          }, SDLoggerSeverity.NOTICE)
-        }
-
         if (data.messageObject.command.toLowerCase() === 'submit' &&
           typeof data.messageObject.tx_blob === 'string'
         ) {
@@ -116,7 +109,7 @@ export default (
             try {
               Object.assign(decodedTransaction, Codec.decode(txHex))
               // No overall TX logging
-              SDLogger('Submit transaction', {
+              SDLogger('TX Submit JSON', {
                 ip: clientState?.ip,
                 transaction: decodedTransaction
               }, SDLoggerSeverity.INFO)
@@ -125,6 +118,13 @@ export default (
             }
           } else {
             log(`SUBMIT transaction hex is NOT HEX`)
+          }
+        } else {
+          if (data.messageObject.command !== 'ping') {
+            SDLogger('WS Command', {
+              ip: clientState?.ip,
+              data: data.messageObject
+            }, SDLoggerSeverity.NOTICE)
           }
         }
       }

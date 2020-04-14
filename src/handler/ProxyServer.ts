@@ -181,13 +181,29 @@ class ProxyServer {
         //   }
         // }, 3000)
       }
+      let flow = ''
+      let node = ''
       if (typeof clientState.submitClient!.uplink !== 'undefined'
         && clientState.submitClient!.uplink.readyState === clientState.submitClient!.uplink.OPEN) {
           clientState.submitClient.uplink!.send(submitMessage)
+          flow = 'send'
+          node = clientState.submitClient!.uplink!.url || ''
       } else {
         clientState.submitClient!.uplinkMessageBuffer.push(submitMessage)
         log(`{${clientState.submitClient!.id}} Storing new buffered message`)
+        flow = 'buffer'
       }
+
+      if (node === '') {
+        node = clientState.submitClient!.preferredServer
+      }
+
+      SDLogger('TX Submit Routing', {
+        ip: clientState?.ip,
+        flow,
+        node,
+        command: submitMessage
+      }, SDLoggerSeverity.DEBUG)
 
       const mLength = Config.get()?.monitoring?.ClientCommandHistory || 10
       if (submitMessage.indexOf('"command":"ping"') < 0) {
