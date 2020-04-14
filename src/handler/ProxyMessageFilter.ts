@@ -93,35 +93,39 @@ export default (
     messageObject
   }
 
-  SDLogger('WS Message (command)', {
-    ip: clientState?.ip,
-    message: data.messageString
-  }, SDLoggerSeverity.NOTICE)
-
   try {
     if (data.messageString.slice(0, 1) === '{' && data.messageString.slice(-1) === '}') {
       // Basic check: valid JSON
       data.messageObject = JSON.parse(data.messageString)
 
       if (typeof data.messageObject === 'object' &&
-        typeof data.messageObject.command !== 'undefined' &&
-        data.messageObject.command.toLowerCase() === 'submit' &&
-        typeof data.messageObject.tx_blob === 'string'
+        typeof data.messageObject.command !== 'undefined'
       ) {
-        const txHex = data.messageObject.tx_blob.toUpperCase()
-        if (txHex.match(/^[A-F0-9]+$/)) {
-          try {
-            Object.assign(decodedTransaction, Codec.decode(txHex))
-            // No overall TX logging
-            SDLogger('Submit transaction', {
-              ip: clientState?.ip,
-              transaction: decodedTransaction
-            }, SDLoggerSeverity.INFO)
-          } catch (e) {
-            log(`Error decoding SUBMIT transaction hex: ${e.message}`)
+        if (data.messageObject.command !== 'ping') {
+          SDLogger('WS Message (command)', {
+            ip: clientState?.ip,
+            data: data.messageObject
+          }, SDLoggerSeverity.NOTICE)
+        }
+
+        if (data.messageObject.command.toLowerCase() === 'submit' &&
+          typeof data.messageObject.tx_blob === 'string'
+        ) {
+          const txHex = data.messageObject.tx_blob.toUpperCase()
+          if (txHex.match(/^[A-F0-9]+$/)) {
+            try {
+              Object.assign(decodedTransaction, Codec.decode(txHex))
+              // No overall TX logging
+              SDLogger('Submit transaction', {
+                ip: clientState?.ip,
+                transaction: decodedTransaction
+              }, SDLoggerSeverity.INFO)
+            } catch (e) {
+              log(`Error decoding SUBMIT transaction hex: ${e.message}`)
+            }
+          } else {
+            log(`SUBMIT transaction hex is NOT HEX`)
           }
-        } else {
-          log(`SUBMIT transaction hex is NOT HEX`)
         }
       }
     }
