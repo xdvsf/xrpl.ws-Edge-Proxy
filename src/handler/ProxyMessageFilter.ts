@@ -168,7 +168,17 @@ export default (
         const status = advisoryAccounts[decodedTransaction.Account].status
 
         if (status >= 1) {
-          throw new Error(`ACCOUNT ${address} FOUND IN ADVISORY, level ${status}`)
+          // throw new Error(`ACCOUNT ${address} FOUND IN ADVISORY, level ${status}`)
+          // Don't reject, allow, but log
+          // TODO: move to separate counter (as this is not filtered but flagged/logged)
+          Stats.filteredCount++
+          SDLogger('Reject transaction', {
+            ip: clientState?.ip,
+            headers: clientState?.headers,
+            transaction: decodedTransaction,
+            reason: `SENDING ACCOUNT ${address} FOUND IN ADVISORY, level ${status}`,
+            soft: true
+          }, SDLoggerSeverity.CRITICAL)
         }
       }
     }
