@@ -1,7 +1,7 @@
 'use strict'
 
 import Debug from 'debug'
-import {Client} from './types'
+import {Client} from '../handler/types'
 import fetch from 'node-fetch'
 import Codec from 'ripple-binary-codec'
 import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'

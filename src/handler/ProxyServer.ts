@@ -12,7 +12,7 @@ import {Request} from 'express'
 import {UplinkClient} from './'
 import {Client} from './types'
 import io from '@pm2/io'
-import ProxyMessageFilter from './ProxyMessageFilter'
+import ProxyMessageFilter from '../filtering/SubmitFilter'
 
 let connectionId = 0
 
