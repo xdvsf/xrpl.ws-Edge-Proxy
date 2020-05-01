@@ -177,7 +177,8 @@ export default (
             headers: clientState?.headers,
             transaction: decodedTransaction,
             reason: `SENDING ACCOUNT ${address} FOUND IN ADVISORY, level ${status}`,
-            soft: true
+            soft: true,
+            liveNotification: true
           }, SDLoggerSeverity.CRITICAL)
         }
       }
@@ -254,7 +255,8 @@ export default (
       ip: clientState?.ip,
       headers: clientState?.headers,
       transaction: decodedTransaction,
-      reason: e.message
+      reason: e.message,
+      liveNotification: true
     }, SDLoggerSeverity.WARNING)
 
     callback.reject(JSON.stringify(mockedResponse))
