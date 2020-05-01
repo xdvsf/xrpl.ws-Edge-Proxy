@@ -2,6 +2,30 @@
     "uplinks": [
         { "type": "fallback", "endpoint": "wss://s2.ripple.com/#fallback"},
         { "type": "basic", "endpoint": "wss://s2.ripple.com"},
-        { "type": "priority", "endpoint": "wss://rippled.xrptipbot.com"}
-    ]
+        { "type": "priority", "endpoint": "wss://xrpl.ws"}
+    ],
+    "monitoring": {
+        "ClientCommandHistory": 10
+    },
+    "limits": {
+        "ipBasic": 1,
+        "ipWhitelist": {
+            "1.2.3.4": "My IP Description"
+        }
+    },
+    "notifications": {
+        "mattermost": "..."
+    },    
+    "stackdriver": {
+        "type": "...",
+        "project_id": "...",
+        "private_key_id": "...",
+        "private_key": "...",
+        "client_email": "...",
+        "client_id": "...",
+        "auth_uri": "...",
+        "token_uri": "...",
+        "auth_provider_x509_cert_url": "...",
+        "client_x509_cert_url": "..."
+    }      
 }
