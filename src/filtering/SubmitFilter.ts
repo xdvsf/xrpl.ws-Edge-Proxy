@@ -2,6 +2,7 @@
 
 import Debug from 'debug'
 import {Client} from '../handler/types'
+import {get as GetConfig} from '../config'
 import fetch from 'node-fetch'
 import Codec from 'ripple-binary-codec'
 import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'
@@ -34,11 +35,22 @@ const advisoryData = {
 
 const updateAdvisory = async () => {
   log('<< UPDATING ADVISORY >>')
+  const config = await GetConfig()
   advisoryData.updating = true
 
   try {
+    const authCall = await fetch('https://api.xrplorer.com/v1/auth', {
+      headers: {'Content-type': 'application/json'},
+      method: 'post',
+      timeout: 10000,
+      redirect: 'follow',
+      follow: 3,
+      body: JSON.stringify(config.credentials.xrpforensics)
+    })
+    const authData = await authCall.json()
+
     const data = await fetch('https://api.xrplorer.com/v1/advisorylist', {
-      headers: {},
+      headers: {Authorization: 'Bearer ' + authData?.access_token},
       method: 'get',
       timeout: 10000,
       redirect: 'follow',
