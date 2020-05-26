@@ -308,7 +308,7 @@ class ProxyServer {
 
           clearTimeout(killNewUplinkTimeout)
 
-          if (clientState.uplinkCount === newUplink!.getId()) {
+          if (typeof newUplink !== 'undefined' && clientState.uplinkCount === newUplink?.getId()) {
             if (typeof clientState.uplink !== 'undefined') {
               log(`{${clientState!.id}} Switch uplinks. ` +
                 `${clientState.uplink?.url} disconnects, ${newUplink?.url} connects`)
