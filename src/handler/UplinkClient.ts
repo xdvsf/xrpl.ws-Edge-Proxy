@@ -43,12 +43,17 @@ class UplinkClient extends WebSocket {
 
       log(`{${clientState!.id}} ` + 'UplinkClient connected to ', endpoint)
       log(`{${clientState!.id}} ` + 'Subscriptions to replay ', this.clientState!.uplinkSubscriptions.length)
-      this.clientState!.uplinkSubscriptions.forEach((s: any): void => {
-        const m = JSON.stringify(Object.assign({}, {
-          ...s,
-          id: 'REPLAYED_SUBSCRIPTION'
-        }))
-        this.send(m)
+
+      this.clientState!.uplinkSubscriptions.forEach((s: string): void => {
+        if (s.trim().slice(0, 1) === '{') {
+          this.send(s.trim().slice(0, -1) + `,"id":"REPLAYED_SUBSCRIPTION"}`)
+        } else{
+          // Custom
+          const subscribeData = s.split(':')
+          this.send(
+            `{"id":"REPLAYED_SUBSCRIPTION","command": "subscribe","${subscribeData[0]}":["${subscribeData[1]}"]}`
+          )
+        }
       })
     })
 
@@ -145,36 +150,75 @@ class UplinkClient extends WebSocket {
              */
             if (['subscribe','unsubscribe'].indexOf(command) > -1) {
               let appendSubscription = true
+
               if (typeof messageJson.id !== 'undefined') {
                 if (messageJson.id === 'REPLAYED_SUBSCRIPTION') {
                   appendSubscription = false
                 }
-                messageJson.id = undefined
+                delete messageJson.id
               }
-              if (this.clientState!.uplinkSubscriptions.length > 0) {
-                // If last message equals current message, ignore it.
-                const subscriptionsString = this.clientState!.uplinkSubscriptions.map(s => {
-                  return JSON.stringify(s)
-                })
-                const lastMessage = subscriptionsString.slice(-1)[0]
-                const thisMessageString = JSON.stringify(messageJson)
 
-                // Message already exists
-                if (lastMessage === thisMessageString) {
-                  appendSubscription = false
+              delete messageJson.url
+              delete messageJson.url_username
+              delete messageJson.url_password
+
+              messageJson.command = messageJson.command.toLowerCase().trim()
+
+              const commandKeys = Object.keys(messageJson)
+
+              ;['accounts', 'accounts_proposed'].forEach(subscriptionType => {
+                if (commandKeys.indexOf(subscriptionType) > -1) {
+                  messageJson[subscriptionType].forEach((account: string) => {
+                    const subscribeStr = subscriptionType + ':' + account
+                    if (messageJson.command === 'subscribe') {
+                      if (this.clientState!.uplinkSubscriptions.indexOf(subscribeStr) < 0) {
+                        this.clientState!.uplinkSubscriptions.push(subscribeStr)
+                      }
+                    }
+                    if (messageJson.command === 'unsubscribe') {
+                      const accountMatch = this.clientState!.uplinkSubscriptions.indexOf(subscribeStr)
+                      if (accountMatch > -1) {
+                        this.clientState!.uplinkSubscriptions.splice(accountMatch, 1)
+                      }
+                    }
+                  })
+                  delete messageJson[subscriptionType]
                 }
+              })
 
-                // Got no unsubscribes, so subscribes may be unique
-                if (this.clientState!.uplinkSubscriptions.filter(s => {
-                  return s.command.toLowerCase() === 'unsubscribe'
-                }).length < 1) {
-                  if (subscriptionsString.indexOf(thisMessageString) > -1) {
+              if (Object.keys(messageJson).length > 1) {
+                // There are still properties after handling subscriptions
+
+                const thisMessageString = JSON.stringify(messageJson)
+                if (this.clientState!.uplinkSubscriptions.length > 0) {
+                  // If last message equals current message, ignore it.
+                  const lastMessage = this.clientState!.uplinkSubscriptions.slice(-1)[0]
+
+                  // Message already exists
+                  if (lastMessage === thisMessageString) {
                     appendSubscription = false
                   }
+
+                  // Got no unsubscribes, so subscribes may be unique
+                  if (this.clientState!.uplinkSubscriptions.filter(s => {
+                    return s.match(/unsubscribe/)
+                  }).length < 1) {
+                    if (this.clientState!.uplinkSubscriptions.indexOf(thisMessageString) > -1) {
+                      appendSubscription = false
+                    }
+                  }
+                  if (thisMessageString.match(/unsubscribe/)) {
+                    const matchingSubMsg = thisMessageString.replace('unsubscribe', 'subscribe')
+                    const matchingSubscription = this.clientState!.uplinkSubscriptions.indexOf(matchingSubMsg)
+                    if (matchingSubscription > -1) {
+                      this.clientState!.uplinkSubscriptions.splice(matchingSubscription, 1)
+                      appendSubscription = false
+                    }
+                  }
                 }
-              }
-              if (appendSubscription) {
-                this.clientState!.uplinkSubscriptions.push(messageJson)
+                if (appendSubscription) {
+                  this.clientState!.uplinkSubscriptions.push(thisMessageString)
+                }
               }
             }
           }
