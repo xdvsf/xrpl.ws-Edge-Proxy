@@ -19,6 +19,19 @@ enum Severity {
   EMERGENCY
 }
 
+interface LogLimitArray {
+  [key: string]: number
+}
+
+interface LogLimit {
+  [key: string]: LogLimitArray
+}
+
+const logLimits: LogLimit = {
+  RateLimit: {},
+  Connection: {}
+}
+
 const config = GetConfig()
 let glog: any
 
@@ -92,6 +105,24 @@ const sendLiveNotification = (data: any = {}): void => {
 
 const Store = async (text: string = '', data: Object = {}, severity:Severity = Severity.DEFAULT): Promise<void> => {
   if (glog) {
+    /**
+     * Suppress repeated log events (key in logLimits) to prevent StackDriver spamming
+     */
+    if (Object.keys(logLimits).indexOf(text) > -1) {
+      const dataIpLoc = Object.keys(data).indexOf('ip')
+      if (dataIpLoc > -1) {
+        const ip = Object.values(data)[dataIpLoc]
+        if (typeof logLimits[text][ip] !== 'undefined') {
+          logLimits[text][ip]++
+          debugLog(`Suppressed Stackdriver logging: ${text} @ ${ip} (occurred ${logLimits[text][ip]} time(s))`)
+          return Promise.resolve()
+        } else {
+          logLimits[text][ip] = 1
+          setTimeout(() => { delete logLimits[text][ip] }, 60 * 1000)
+        }
+      }
+    }
+
     const metadata = {severity: Severity[severity]}
     const entry = glog.entry(metadata, Object.assign({text: text}, Object.assign(data, {hostname})))
 
