@@ -34,5 +34,6 @@ Not all commands, but it's a start.
 
 ##### Add uplink into running config (non persistent)
 `http://#{ip}:4002/add-uplink/#{uplinkType}/#{protocol}/#{hostname}/#{hash}`
+
 Eg.
 `http://#{ip}:4002/add-uplink/basic/wss/some-backend.local/some-md5`
