@@ -25,7 +25,7 @@ This package (Typescript, node) runs best on [node 14](https://nodejs.org/downlo
 ## Admin API commands
 Not all commands, but it's a start.
 
-##### Show clients & staet
+##### Show clients, state, uplink, etc.
 `http://#{ip}:4002/status?details=true`
 
 ##### Migrate uplink clients for maintenance
