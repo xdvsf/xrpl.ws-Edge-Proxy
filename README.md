@@ -11,6 +11,8 @@ See: https://xrpl.ws
 
 This package (Typescript, node) runs best on [node 14](https://nodejs.org/download/release/latest-v14.x/). Tested on Debian and Ubuntu, and runs in Docker containers (of course).
 
+> Please run with NGINX/Cloudflare/... in front.
+
 1. Make sture node 14 is installed
 2. Clone the repository
 3. Enter the local (checked out) repository directory
