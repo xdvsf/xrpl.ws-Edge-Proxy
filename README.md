@@ -19,3 +19,20 @@ This package (Typescript, node) runs best on [node 14](https://nodejs.org/downlo
 6. Copy `config.default.json` to `config.json` and modify. Remove the `mattermost` and `xrpforensics` section if not required.
 7. Run. Install in the `pm2` process manager with `npm run pm2`, or run in dev (verbose) with `npm run dev`. If running in pm2, check status with `pm2 monit` (and check the pm2 manual for more commands)
 8. When running in pm2 mode, the proxy will run at **TCP port 4001**, the admin API will run at **TCP port 4002**. Please **KEEP THE ADMIN PORT CLOSED IN THE FIREWALL OF YOUR MACHINE/NETWORK!**. The admin port will automatically be the public port +1. To change the public port, change `pm2.config.js`. When running in dev mode, the proxy will run at TCP port 4000 and the admin port (+1) at 4001. You can change this by invoking the dev command manually (with `nodemon` globally installed, `npm install -g nodemon`) (`npm run build;PORT=4000 DEBUG=app*,msg* nodemon dist/index.js`) with a changed port number, or changing `package.json`.
+
+## Admin API commands
+Not all commands, but it's a start.
+
+##### Show clients & staet
+`http://#{ip}:4002/status?details=true`
+
+##### Migrate uplink clients for maintenance
+`http://#{ip}:4002/uplink/#{hash}/migrate`
+
+##### Take uplink back into pool
+`http://#{ip}:4002/uplink/#{hash}/up`
+
+##### Add uplink into running config (non persistent)
+`http://#{ip}:4002/add-uplink/#{uplinkType}/#{protocol}/#{hostname}/#{hash}`
+Eg.
+`http://#{ip}:4002/add-uplink/basic/wss/some-backend.local/some-md5`
