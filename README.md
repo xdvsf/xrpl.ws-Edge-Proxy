@@ -30,6 +30,7 @@ Not all commands, but it's a start.
 
 ##### Migrate uplink clients for maintenance
 `http://#{ip}:4002/uplink/#{hash}/migrate`
+All connected clients to the given uplink will be reconnected to another uplink, and websocket subscriptions (`subscribe` command) will be automatically re-subscribed at the new connected uplink server. Once done, a soft handover will take place. The client will notice nothing and stay connected to the proxy. Within a second the uplink can be taken down for maintenance without anybody noticing. After maintenance, use the next command to enable it in the pool again. 
 
 ##### Take uplink back into pool
 `http://#{ip}:4002/uplink/#{hash}/up`
