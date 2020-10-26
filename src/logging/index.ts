@@ -124,21 +124,25 @@ const Store = async (text: string = '', data: Object = {}, severity:Severity = S
     }
 
     const metadata = {severity: Severity[severity]}
-    const entry = glog.entry(metadata, Object.assign({text: text}, Object.assign(data, {hostname})))
+    try {
+      const entry = glog.entry(metadata, Object.assign({text: text}, Object.assign(data, {hostname})))
 
-    if (Object.keys(data).indexOf('liveNotification') > -1) {
-      sendLiveNotification(data)
-    }
+      if (Object.keys(data).indexOf('liveNotification') > -1) {
+        sendLiveNotification(data)
+      }
 
-    await glog.write(entry, {resource: {type: 'global'}})
-    if (
-      severity === Severity.WARNING ||
-      severity === Severity.ERROR ||
-      severity === Severity.CRITICAL ||
-      severity === Severity.ALERT ||
-      severity === Severity.EMERGENCY
-    ) {
-      debugLog(`<STACKDRIVER> Logged: ${text}`)
+      await glog.write(entry, {resource: {type: 'global'}})
+      if (
+        severity === Severity.WARNING ||
+        severity === Severity.ERROR ||
+        severity === Severity.CRITICAL ||
+        severity === Severity.ALERT ||
+        severity === Severity.EMERGENCY
+      ) {
+        debugLog(`<STACKDRIVER> Logged: ${text}`)
+      }
+    } catch (e) {
+      debugLog(`Stackdriver logging error: ${text} - err: ${e.message}`)
     }
   }
 
