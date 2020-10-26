@@ -420,12 +420,12 @@ class ProxyServer {
         }
         clientState.preferredServer = this.getUplinkServer(clientState)
 
-        // No overall Connection logging
-        SDLogger('Connection', {
-          ip: clientState?.ip,
-          headers: clientState?.headers,
-          preferredServer: clientState?.preferredServer
-        }, SDLoggerSeverity.INFO)
+        // No overall Connection logging, disabled: StackDriver hammering
+        // SDLogger('Connection', {
+        //   ip: clientState?.ip,
+        //   headers: clientState?.headers,
+        //   preferredServer: clientState?.preferredServer
+        // }, SDLoggerSeverity.INFO)
 
         log(`{${clientState!.id}} New connection from [ ${clientState.ip} ], ` +
           `origin: [ ${clientState.headers.origin || ''} ]`)
