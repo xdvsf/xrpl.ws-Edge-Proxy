@@ -7,9 +7,23 @@ const logMsg = Debug('msg')
 import {Client} from './types'
 import io from '@pm2/io'
 
+const penaltyDurationSec = 60
+
 const metrics = {
   messages: io.counter({name: '# messages'})
 }
+
+type penaltyData = {
+  count: number
+  last: number
+  is: boolean
+}
+
+type penaltyObj = {
+  [key: string]: penaltyData
+}
+
+const penalties: penaltyObj = {}
 
 class UplinkClient extends WebSocket {
   private closedOnPurpose: boolean = false
@@ -28,11 +42,27 @@ class UplinkClient extends WebSocket {
     this.clientState = clientState
     this.id = clientState.uplinkCount + 1
 
-    // remoteLogger.Store('Some Text', {localData: true}, remoteLogger.Severity.ALERT)
+    // log(penalties)
+
     this.connectTimeout = setTimeout(() => {
       log(`Close. Connection timeout.`)
+
+      if (Object.keys(penalties).indexOf(endpoint) < 0) {
+        penalties[endpoint] = {count: 0, last: 0, is: false}
+      }
+
+      penalties[endpoint].count++
+      log(`Penalty ${endpoint} is now ${penalties[endpoint].count}`)
+      penalties[endpoint].last = Math.round(new Date().getTime() / 1000)
+
+      if (penalties[endpoint].count > 1) {
+        penalties[endpoint].is = true
+      }
+
+      log(penalties)
+
       this.close()
-    }, 10 * 1000)
+    }, 7.5 * 1000)
 
     this.on('open', () => {
       clearTimeout(this.connectTimeout)
@@ -114,6 +144,24 @@ class UplinkClient extends WebSocket {
         log(`{${clientState!.id}} ` + 'UPLINK CONNECTION ERROR', endpoint, ': ', error.message)
       }
     })
+
+    // Penalties
+    if (Object.keys(penalties).indexOf(endpoint) > -1 && penalties[endpoint].is) {
+      if (Math.round(new Date().getTime() / 1000) - penalties[endpoint].last > penaltyDurationSec) {
+        penalties[endpoint].last = 0
+        penalties[endpoint].count = 0
+        penalties[endpoint].is = false
+        log(`Penalty ${endpoint} is now removed`)
+      }
+
+      clearTimeout(this.connectTimeout)
+      clearTimeout(this.pongTimeout)
+      clearInterval(this.pingInterval)
+
+      log(`UPLINK TEMP PENALTY: CLOSE {${clientState!.id}} @ ${endpoint}`)
+      this.close()
+    }
+
 
     this.clientState.uplinkCount++
   }
