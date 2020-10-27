@@ -4,10 +4,12 @@ import Debug from 'debug'
 import WebSocket from 'ws'
 const log = Debug('app')
 const logMsg = Debug('msg')
+import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'
 import {Client} from './types'
 import io from '@pm2/io'
 
-const penaltyDurationSec = 60
+const maxErrorsBeforePenalty = 1
+const penaltyDurationSec = 90
 
 const metrics = {
   messages: io.counter({name: '# messages'})
@@ -45,7 +47,7 @@ class UplinkClient extends WebSocket {
     // log(penalties)
 
     this.connectTimeout = setTimeout(() => {
-      log(`Close. Connection timeout.`)
+      log(`Close. Connection timeout. - Penalties (before):`, {penalties})
 
       if (Object.keys(penalties).indexOf(endpoint) < 0) {
         penalties[endpoint] = {count: 0, last: 0, is: false}
@@ -55,11 +57,16 @@ class UplinkClient extends WebSocket {
       log(`Penalty ${endpoint} is now ${penalties[endpoint].count}`)
       penalties[endpoint].last = Math.round(new Date().getTime() / 1000)
 
-      if (penalties[endpoint].count > 1) {
+      if (penalties[endpoint].count > maxErrorsBeforePenalty) {
         penalties[endpoint].is = true
+        const penaltyDetails = {
+          endpoint,
+          ip: clientState?.ip,
+          uplinkCount: clientState?.uplinkCount || 0
+        }
+        // log('Endpoint Penalty', penaltyDetails)
+        SDLogger('Endpoint Penalty', penaltyDetails, SDLoggerSeverity.NOTICE)
       }
-
-      log(penalties)
 
       this.close()
     }, 7.5 * 1000)
