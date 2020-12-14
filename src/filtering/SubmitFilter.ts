@@ -20,6 +20,9 @@ const filteredByDestination: StringMapString = {}
 const filteredByFee: StringMapNumber = {}
 const advisoryAccounts: StringMapAny = {}
 
+const destinationTagMissingAccounts: StringMapAny = {}
+const filteredByDestinationTagMissing: StringMapNumber = {}
+
 const advisoryData = {
   levels: {
     E: 'ERROR',
@@ -78,12 +81,56 @@ const updateAdvisory = async () => {
     return false
   }
 }
+const destinationTagData = {
+  accounts: destinationTagMissingAccounts,
+  update: 0,
+  updating: false
+}
+
+const updateDestinationTagRequired = async () => {
+  log('<< UPDATING DESTINATION TAG LIST >>')
+  destinationTagData.updating = true
+
+  try {
+    const data = await fetch('https://xrpl.ws-stats.com/lists/f:dtag_accounts_without_flag', {
+      method: 'get', timeout: 7500, redirect: 'follow', follow: 3
+    })
+    const t = await data.text()
+    const json = t.split(`\n`).reduce((a, b) => {
+      const match = b.match(/^(.*?)(r[a-zA-Z0-9]{18,})(.*?)$/)
+      if (match) {
+        Object.assign(a, {
+          [match[2]]: (match[1].replace(/[,; ]*$/g, '') + ' ' + match[3].replace(/[,; ]*$/g, '')).trim()
+        })
+      }
+      return a
+    }, {})
+
+    if (Object.keys(json).length < 50) {
+      throw new Error('Invalid destination tag list repsonse (keylen)')
+    }
+
+    Object.assign(destinationTagData.accounts, json)
+    destinationTagData.update = Math.round(+(new Date()) / 1000)
+    destinationTagData.updating = false
+
+    log(`Updated destination tag data: ${Object.keys(json).length} accounts`)
+
+    return true
+  } catch (e) {
+    destinationTagData.updating = false
+    log('Error destination tag data', e.message)
+
+    return false
+  }
+}
 
 export const Stats = {
   filteredCount: 0,
   filteredByIp,
   filteredByDestination,
-  filteredByFee
+  filteredByFee,
+  filteredByDestinationTagMissing
 }
 
 type FilterCallbacks = {
@@ -192,6 +239,40 @@ export default (
             soft: true,
             liveNotification: true
           }, SDLoggerSeverity.CRITICAL)
+        }
+      }
+
+      if (typeof decodedTransaction.Destination === 'string') {
+        // It's a transaction TO someone
+        if (
+          typeof destinationTagData.accounts[decodedTransaction.Destination] !== 'undefined' &&
+          (
+            typeof decodedTransaction.DestinationDestinationTag === 'undefined' ||
+            String(decodedTransaction.DestinationDestinationTag) === '0'
+          )
+        ) {
+          const destinationAccount = decodedTransaction.Destination
+          const destinationAccountName = destinationTagData.accounts[destinationAccount]
+          if (Object.keys(Stats.filteredByDestinationTagMissing).indexOf(destinationAccountName) < 0) {
+            Object.assign(Stats.filteredByDestinationTagMissing, {
+              [destinationAccountName]: 1
+            })
+          } else {
+            Stats.filteredByDestinationTagMissing[destinationAccountName]++
+          }
+
+          const reason = `Destination Tag missing while required: ${destinationAccount} (${destinationAccountName})`
+          SDLogger('Reject transaction', {
+            ip: clientState?.ip,
+            headers: clientState?.headers,
+            reason,
+            dtagMissing: {
+              destination: destinationAccount,
+              destinationName: destinationAccountName
+            },
+            transaction: decodedTransaction
+          }, SDLoggerSeverity.NOTICE)
+          throw new Error(reason)
         }
       }
     }
@@ -308,3 +389,6 @@ export default (
 
 updateAdvisory()
 setInterval(updateAdvisory, 60 * 5 * 1000) // 5 minutes
+
+updateDestinationTagRequired()
+setInterval(updateDestinationTagRequired, 60 * 10 * 1000) // 10 minutes
