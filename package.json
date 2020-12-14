@@ -51,8 +51,8 @@
     "@types/node": "^12.19.1",
     "@types/ws": "^6.0.4",
     "artillery": "^1.6.1",
-    "jest": "^24.8.0",
-    "ts-jest": "^26.4.3",
+    "jest": "^24.9.0",
+    "ts-jest": "^26.4.4",
     "tslint": "^5.20.1",
     "tslint-eslint-rules": "^5.4.0",
     "typescript": "^3.9.7"
