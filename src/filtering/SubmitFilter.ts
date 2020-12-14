@@ -146,6 +146,8 @@ export default (
 ): boolean => {
   const messageObject: StringMapAny = {}
   const decodedTransaction: StringMapAny = {}
+  
+  let liveNotification = true
 
   const data = {
     messageString: message.toString().trim(),
@@ -236,8 +238,7 @@ export default (
             headers: clientState?.headers,
             transaction: decodedTransaction,
             reason: `SENDING ACCOUNT ${address} FOUND IN ADVISORY, level ${status}`,
-            soft: true,
-            liveNotification: true
+            soft: true
           }, SDLoggerSeverity.CRITICAL)
         }
       }
@@ -247,8 +248,8 @@ export default (
         if (
           typeof destinationTagData.accounts[decodedTransaction.Destination] !== 'undefined' &&
           (
-            typeof decodedTransaction.DestinationDestinationTag === 'undefined' ||
-            String(decodedTransaction.DestinationDestinationTag) === '0'
+            typeof decodedTransaction.DestinationTag === 'undefined' ||
+            String(decodedTransaction.DestinationTag) === '0'
           )
         ) {
           const destinationAccount = decodedTransaction.Destination
@@ -261,6 +262,7 @@ export default (
             Stats.filteredByDestinationTagMissing[destinationAccountName]++
           }
 
+          liveNotification = false
           const reason = `Destination Tag missing while required: ${destinationAccount} (${destinationAccountName})`
           SDLogger('Reject transaction', {
             ip: clientState?.ip,
@@ -272,6 +274,20 @@ export default (
             },
             transaction: decodedTransaction
           }, SDLoggerSeverity.NOTICE)
+          try {
+            fetch('https://xrpl.ws-stats.com/reporting', {
+              headers: {'Content-type': 'application/json'},
+              method: 'post', timeout: 5000, redirect: 'follow', follow: 3,
+              body: JSON.stringify({
+                destinationAccount,
+                destinationAccountName,
+                decodedTransaction,
+                headers: clientState?.headers
+              })
+            })
+          } catch (e) {
+            //
+          }
           throw new Error(reason)
         }
       }
@@ -349,7 +365,7 @@ export default (
       headers: clientState?.headers,
       transaction: decodedTransaction,
       reason: e.message,
-      liveNotification: true
+      liveNotification
     }, SDLoggerSeverity.WARNING)
 
     callback.reject(JSON.stringify(mockedResponse))
