@@ -113,7 +113,6 @@ class UplinkClient extends WebSocket {
       }
 
       this.clientState = undefined
-      log.destroy()
     })
 
     this.on('message', data => {

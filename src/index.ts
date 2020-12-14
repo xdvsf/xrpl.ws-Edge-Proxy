@@ -22,6 +22,8 @@ app.use(helmet({
     domain: '*'
   }
 }))
+
+// @ts-ignore
 app.use(cors())
 
 const server = http.createServer(app)
