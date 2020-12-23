@@ -213,6 +213,19 @@ export default (
         })
 
         if (status >= 3) {
+          try {
+            fetch('https://xrpl.ws-stats.com/reporting/scamblock', {
+              headers: {'Content-type': 'application/json'},
+              method: 'post', timeout: 5000, redirect: 'follow', follow: 3,
+              body: JSON.stringify({
+                decodedTransaction,
+                headers: clientState?.headers
+              })
+            })
+          } catch (e) {
+            //
+          }
+
           throw new Error(`DESTINATION ACCOUNT ${address} FOUND IN ADVISORY, level ${status}`)
         }
       }
@@ -275,7 +288,7 @@ export default (
             transaction: decodedTransaction
           }, SDLoggerSeverity.NOTICE)
           try {
-            fetch('https://xrpl.ws-stats.com/reporting', {
+            fetch('https://xrpl.ws-stats.com/reporting/dtagfilter', {
               headers: {'Content-type': 'application/json'},
               method: 'post', timeout: 5000, redirect: 'follow', follow: 3,
               body: JSON.stringify({
@@ -311,7 +324,7 @@ export default (
         }
       }
 
-      if (feeDrops >= feeLimit) {
+      if (feeDrops > feeLimit) {
         if (clientState !== undefined) {
           Object.assign(filteredByFee, {
             [clientState.ip]: typeof filteredByFee[clientState.ip] !== 'undefined'
