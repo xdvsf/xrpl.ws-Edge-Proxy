@@ -1,4 +1,4 @@
-# Rippled Edge Proxy
+# XRPLD Edge Proxy
 
 ### wss://xrpl.ws
 
