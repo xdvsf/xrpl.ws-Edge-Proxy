@@ -6,6 +6,9 @@ import * as http from 'http'
 import WebSocket from 'ws'
 import {ProxyServer, HttpServer} from './handler'
 
+const posix = require('posix')
+posix.setrlimit('nofile', {soft: 10000})
+
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
   process.stdout.write(`<<< rippled-ws-proxy >>>\n\n`)
 }

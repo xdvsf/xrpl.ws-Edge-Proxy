@@ -40,6 +40,7 @@
     "express": "^4.17.1",
     "helmet": "^3.23.3",
     "node-fetch": "^2.6.1",
+    "posix": "^4.2.0",
     "ripple-binary-codec": "^0.2.7",
     "utf-8-validate": "^5.0.2",
     "ws": "^7.3.1"

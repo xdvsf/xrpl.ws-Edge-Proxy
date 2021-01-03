@@ -567,8 +567,14 @@ class ProxyServer {
               clientState!.submitClient!.uplink.close()
             }
             setTimeout(() => {
-              clientState!.submitClient!.uplink = undefined
-              clientState!.submitClient = undefined
+              if (typeof clientState!.submitClient !== 'undefined') {
+                if (typeof clientState!.submitClient!.uplink !== 'undefined') {
+                  clientState!.submitClient!.uplink = undefined
+                }
+              }
+              if (typeof clientState!.submitClient !== 'undefined') {
+                clientState!.submitClient = undefined
+              }
             }, 500)
           }
 
