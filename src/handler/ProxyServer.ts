@@ -342,10 +342,10 @@ class ProxyServer {
               clientState.uplinkMessageBuffer = []
             }
           } else {
-            log(`{${clientState!.id}} ${newUplink?.url} connected, but id expired`
-              + ` (got ${newUplink!.getId()}, is at ${clientState.uplinkCount}). Closing.`)
             try {
               newUplink!.close(0, 'ON_PURPOSE')
+              log(`{${clientState!.id}} ${newUplink?.url} connected, but id expired`
+                + ` (got ${newUplink!.getId()}, is at ${clientState.uplinkCount}). Closing.`)
             } catch (e) {
               log('X2', e)
             }
@@ -567,13 +567,15 @@ class ProxyServer {
               clientState!.submitClient!.uplink.close()
             }
             setTimeout(() => {
-              if (typeof clientState!.submitClient !== 'undefined') {
-                if (typeof clientState!.submitClient!.uplink !== 'undefined') {
-                  clientState!.submitClient!.uplink = undefined
+              if (typeof clientState !== 'undefined') {
+                if (typeof clientState!.submitClient !== 'undefined') {
+                  if (typeof clientState!.submitClient!.uplink !== 'undefined') {
+                    clientState!.submitClient!.uplink = undefined
+                  }
                 }
-              }
-              if (typeof clientState!.submitClient !== 'undefined') {
-                clientState!.submitClient = undefined
+                if (typeof clientState!.submitClient !== 'undefined') {
+                  clientState!.submitClient = undefined
+                }
               }
             }, 500)
           }
