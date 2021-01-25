@@ -77,7 +77,6 @@ class UplinkClient extends WebSocket {
         this.send(JSON.stringify({id: 'CONNECTION_PING_TEST', command: 'ping'}))
       }, 2500)
 
-
       log(`{${clientState!.id}} ` + 'UplinkClient connected to ', endpoint)
       log(`{${clientState!.id}} ` + 'Subscriptions to replay ', this.clientState!.uplinkSubscriptions.length)
 
@@ -111,12 +110,23 @@ class UplinkClient extends WebSocket {
           this.emit('gone')
         }
       }
-
-      this.clientState = undefined
+      // this.clientState = undefined
     })
 
     this.on('message', data => {
       clearTimeout(this.connectTimeout)
+
+      if (typeof clientState !== 'undefined' && clientState!.closed) {
+        // Client is gone.
+        log(`CLIENT {${clientState!.id}} GONE - kill uplink`)
+        this.closedOnPurpose = true
+        this.close()
+
+        clearTimeout(this.pongTimeout)
+        clearInterval(this.pingInterval)
+
+        return
+      }
 
       const firstPartOfMessage = data.toString().slice(0, 100).trim()
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
@@ -127,6 +137,11 @@ class UplinkClient extends WebSocket {
         this.clientState!.socket.send(data)
       } else {
         if (firstPartOfMessage.match(/CONNECTION_PING_TEST/)) {
+          logMsg(`MSG (PING_TEST) {${clientState!.id}:${
+            clientState!.closed
+              ? 'closed'
+              : 'open'
+          }} ${endpoint}, ${firstPartOfMessage}`)
           clearTimeout(this.pongTimeout)
           this.pongTimeout = setTimeout(() => {
             log(`{${clientState!.id}} ` +
@@ -177,6 +192,10 @@ class UplinkClient extends WebSocket {
   }
 
   close (code?: number, data?: string) {
+    clearTimeout(this.connectTimeout)
+    clearTimeout(this.pongTimeout)
+    clearInterval(this.pingInterval)
+
     if (typeof code !== 'undefined' && typeof data !== 'undefined' && data === 'ON_PURPOSE') {
       this.closedOnPurpose = true
     }
@@ -285,7 +304,18 @@ class UplinkClient extends WebSocket {
     } else {
       if (!message.slice(0, 100).match(/NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION/)) {
         log('UplinkClient sent message: UPLINK NOT CONNECTED YET. Added to buffer.')
-        this.clientState!.uplinkMessageBuffer.push(message)
+        this?.clientState?.uplinkMessageBuffer.push(message)
+        if (Array.isArray(this?.clientState?.uplinkMessageBuffer)) {
+          if (Array(this.clientState!.uplinkMessageBuffer).length > 1000) {
+            log('Clearing ClientState, buffer > 1000')
+            try {
+              this.clientState!.socket.close()
+              this.clientState!.uplink!.close()
+            } catch (e) {
+              //
+            }
+          }
+        }
       }
     }
   }

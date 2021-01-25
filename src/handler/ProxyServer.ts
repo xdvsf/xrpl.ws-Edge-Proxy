@@ -257,13 +257,17 @@ class ProxyServer {
         clientState.preferredServer = this.getUplinkServer(clientState)
         log(`{${clientState!.id}} Uplink gone, retry in 2000ms to [ ${clientState.preferredServer} ]`)
 
-        setTimeout(() => {
-          newUplink = undefined
-          clientState.uplink = undefined
-          clientState.counters.uplinkReconnects++
-          log(`{${clientState!.id}} Reconnecting...`)
-          this.connectUplink(clientState)
-        }, 2000)
+        if (typeof clientState !== 'undefined' && !clientState!.closed) {
+          setTimeout(() => {
+            newUplink = undefined
+            clientState.uplink = undefined
+            if (typeof clientState !== 'undefined' && !clientState!.closed) {
+              clientState.counters.uplinkReconnects++
+              log(`{${clientState!.id}} Reconnecting...`)
+              this.connectUplink(clientState)
+            }
+          }, 2000)
+        }
         return
       })
 
@@ -554,8 +558,13 @@ class ProxyServer {
 
           log(`{${clientState!.id}} Closed socket @code`, code, reason)
 
-          if (typeof clientState!.uplink !== 'undefined') {
-            clientState!.uplink.close()
+          if (typeof clientState !== 'undefined') {
+            if (typeof clientState!.uplink !== 'undefined') {
+              clientState!.uplink.close()
+            }
+            if (typeof clientState!.uplinkMessageBuffer !== 'undefined') {
+              clientState!.uplinkMessageBuffer = []
+            }
           }
 
           clearInterval(pingInterval)
@@ -576,13 +585,18 @@ class ProxyServer {
                 if (typeof clientState!.submitClient !== 'undefined') {
                   clientState!.submitClient = undefined
                 }
+                if (typeof clientState!.uplinkMessageBuffer !== 'undefined') {
+                  clientState!.uplinkMessageBuffer = []
+                }
               }
             }, 500)
           }
 
           setTimeout(() => {
             clientState!.uplink = undefined
-            clientState = undefined
+            setTimeout(() => {
+              clientState = undefined
+            }, 100)
           }, 1000)
         })
       } // else: not IP limited
