@@ -146,7 +146,6 @@ export default (
 ): boolean => {
   const messageObject: StringMapAny = {}
   const decodedTransaction: StringMapAny = {}
-  
   let liveNotification = true
 
   const data = {
