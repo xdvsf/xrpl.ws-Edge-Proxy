@@ -127,7 +127,7 @@ const Store = async (text: string = '', data: Object = {}, severity:Severity = S
     try {
       const entry = glog.entry(metadata, Object.assign({text: text}, Object.assign(data, {hostname})))
 
-      if (Object.keys(data).indexOf('liveNotification') > -1) {
+      if (Object.keys(data).indexOf('liveNotification') > -1 && Boolean((data as any).liveNotification || false)) {
         sendLiveNotification(data)
       }
 
