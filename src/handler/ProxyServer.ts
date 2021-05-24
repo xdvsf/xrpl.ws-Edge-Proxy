@@ -473,6 +473,7 @@ class ProxyServer {
                 relayMessage = false
                 if (messageJson.__api === 'state') {
                   ws.send(JSON.stringify({
+                    id: messageJson?.id || undefined,
                     endpoint: typeof clientState!.uplink !== 'undefined' ? clientState!.uplink?.url : null,
                     preferredServer: clientState!.preferredServer,
                     uplinkType: clientState!.uplinkType,
