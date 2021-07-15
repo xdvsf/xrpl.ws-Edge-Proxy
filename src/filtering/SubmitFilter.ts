@@ -323,6 +323,10 @@ export default (
         }
       }
 
+      if (decodedTransaction.TransactionType.match(/Check/i)) {
+        throw new Error(`Submitting Check transactions currently disabled.`)
+      }
+
       if (feeDrops > feeLimit) {
         if (clientState !== undefined) {
           Object.assign(filteredByFee, {
