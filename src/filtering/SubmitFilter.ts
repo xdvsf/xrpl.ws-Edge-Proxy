@@ -409,6 +409,7 @@ export default (
     (data.messageObject?.command || '').toLowerCase()
     .match(/^(.*subscribe|account_.+|ledger|ledger_closed|ledger_current|book_offers|deposit_authorized|.*path_find)$/)
     && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
+    && (data.messageObject?.command.toLowerCase() !== 'account_tx')
     && (typeof data.messageObject?.ledger_hash === 'undefined')
     && (typeof data.messageObject?.ledger_index_min === 'undefined')
     && (typeof data.messageObject?.ledger_index_max === 'undefined')
