@@ -125,11 +125,11 @@ class ProxyServer {
       : clientsByIp[ip] || 0
   }
 
-  createSubmitClient (clientState: Client): Client {
-    const submitClient: Client = {
+  createClient (clientState: Client, uplinkType = 'submit'): Client {
+    const client: Client = {
       id: connectionId,
       closed: false,
-      uplinkType: 'submit',
+      uplinkType,
       preferredServer: '',
       socket: clientState.socket,
       request: clientState.request,
@@ -149,68 +149,70 @@ class ProxyServer {
       uplinkLastMessages: []
     }
 
-    submitClient.preferredServer = this.getUplinkServer(submitClient)
-    this.connectUplink(submitClient)
+    client.preferredServer = this.getUplinkServer(client)
+    this.connectUplink(client)
 
-    return submitClient
+    return client
   }
 
-  submitTransaction (clientState: Client, submitMessage: string): void {
+  specialTxRelay (clientState: Client, submitMessage: string, uplinkType = 'submit'): void {
+    const clientKey = uplinkType + 'Client'
+    let client: Client | undefined
+
     if (clientState !== undefined) {
-      if (typeof clientState.submitClient === 'undefined') {
-        clientState.submitClient = this.createSubmitClient(clientState)
-        // setInterval(() => {
-        //   if (clientState !== undefined) {
-        //     if (clientState.submitClient !== undefined) {
-        //       log('submitClient', Object.assign({}, {
-        //         id: clientState.submitClient.id,
-        //         closed: clientState.submitClient.closed,
-        //         uplinkType: clientState.submitClient.uplinkType,
-        //         preferredServer: clientState.submitClient.preferredServer,
-        //         uplinkMessageBuffer: clientState.submitClient.uplinkMessageBuffer,
-        //         connectMoment: clientState.submitClient.connectMoment,
-        //         counters: clientState.submitClient.counters,
-        //         uplinkCount: clientState.submitClient.uplinkCount,
-        //         uplinkLastMessages: clientState.submitClient.uplinkLastMessages
-        //       }))
-        //     } else {
-        //       log('clientState.submitClient UNDEFINED')
-        //     }
-        //   } else {
-        //     log('clientState UNDEFINED')
-        //   }
-        // }, 3000)
+      if (Object.keys(clientState).indexOf(clientKey) < 0) {
+        log('___________________CREATECLIENT', {clientKey, uplinkType})
+        client = this.createClient(clientState, uplinkType)
+        Object.assign(clientState, {
+          [clientKey]: client
+        })
+      } else {
+        if (uplinkType === 'submit') {
+          client = clientState?.submitClient
+        }
+        if (uplinkType === 'nonfh') {
+          client = clientState?.nonfhClient
+        }
       }
+
+      if (!client) {
+        return
+      }
+      // const specialClient: Client = clientState[clientKey]
+
       let flow = ''
       let node = ''
-      if (typeof clientState.submitClient!.uplink !== 'undefined'
-        && clientState.submitClient!.uplink.readyState === clientState.submitClient!.uplink.OPEN) {
-          clientState.submitClient.uplink!.send(submitMessage)
+
+      if (typeof client!.uplink !== 'undefined'
+        && client!.uplink.readyState === client!.uplink.OPEN) {
+          client.uplink!.send(submitMessage)
           flow = 'send'
-          node = clientState.submitClient!.uplink!.url || ''
+          node = client!.uplink!.url || ''
       } else {
-        clientState.submitClient!.uplinkMessageBuffer.push(submitMessage)
-        log(`{${clientState.submitClient!.id}} Storing new buffered message`)
+        client!.uplinkMessageBuffer.push(submitMessage)
+        log(`{${client!.id}} Storing new buffered message`)
         flow = 'buffer'
       }
 
       if (node === '') {
-        node = clientState.submitClient!.preferredServer
+        node = client!.preferredServer
       }
 
-      SDLogger('TX Submit Routing', {
-        ip: clientState?.ip,
-        flow,
-        node,
-        command: submitMessage
-      }, SDLoggerSeverity.DEBUG)
+      if (uplinkType === 'submit') {
+        SDLogger('TX Submit Routing', {
+          ip: clientState?.ip,
+          flow,
+          node,
+          command: submitMessage
+        }, SDLoggerSeverity.DEBUG)
+      }
 
       const mLength = Config.get()?.monitoring?.ClientCommandHistory || 10
       if (submitMessage.indexOf('"command":"ping"') < 0) {
-        clientState.submitClient!.uplinkLastMessages.unshift(
-          `${clientState.submitClient!.counters.txCount}:${submitMessage}`
+        client!.uplinkLastMessages.unshift(
+          `${client!.counters.txCount}:${submitMessage}`
         )
-        clientState.submitClient!.uplinkLastMessages = clientState.submitClient!.uplinkLastMessages.slice(0, mLength)
+        client!.uplinkLastMessages = client!.uplinkLastMessages.slice(0, mLength)
       }
     }
   }
@@ -334,8 +336,11 @@ class ProxyServer {
                     send (safeData: string): void {
                       newUplink!.send(safeData)
                     },
+                    nonfh: (safeData: string): void => {
+                      this.specialTxRelay(clientState, safeData, 'nonfh')
+                    },
                     submit: (safeData: string): void => {
-                      this.submitTransaction(clientState, safeData)
+                      this.specialTxRelay(clientState, safeData, 'submit')
                     },
                     reject (mockedResponse: string): void {
                       clientState?.socket?.send(mockedResponse)
@@ -518,8 +523,11 @@ class ProxyServer {
                   send (safeData: string): void {
                     clientState!.uplink!.send(safeData)
                   },
+                  nonfh: (safeData: string): void => {
+                    this.specialTxRelay(clientState!, safeData, 'nonfh')
+                  },
                   submit: (safeData: string): void => {
-                    this.submitTransaction(clientState!, safeData)
+                    this.specialTxRelay(clientState!, safeData, 'submit')
                   },
                   reject (mockedResponse: string): void {
                     clientState?.socket?.send(mockedResponse)
@@ -573,27 +581,29 @@ class ProxyServer {
           clearInterval(pingInterval)
           clearTimeout(pingTimeout)
 
-          if (typeof clientState!.submitClient !== 'undefined') {
-            clientState!.submitClient.closed = true
-            if (typeof clientState!.submitClient!.uplink !== 'undefined') {
-              clientState!.submitClient!.uplink.close()
-            }
-            setTimeout(() => {
-              if (typeof clientState !== 'undefined') {
-                if (typeof clientState!.submitClient !== 'undefined') {
-                  if (typeof clientState!.submitClient!.uplink !== 'undefined') {
-                    clientState!.submitClient!.uplink = undefined
+          ;[(clientState!.submitClient), (clientState!.nonfhClient)].forEach(c => {
+            if (typeof c !== 'undefined') {
+              c.closed = true
+              if (typeof c!.uplink !== 'undefined') {
+                c!.uplink.close()
+              }
+              setTimeout(() => {
+                if (typeof clientState !== 'undefined') {
+                  if (typeof c !== 'undefined') {
+                    if (typeof c!.uplink !== 'undefined') {
+                      c!.uplink = undefined
+                    }
+                  }
+                  if (typeof c !== 'undefined') {
+                    c = undefined
+                  }
+                  if (typeof clientState!.uplinkMessageBuffer !== 'undefined') {
+                    clientState!.uplinkMessageBuffer = []
                   }
                 }
-                if (typeof clientState!.submitClient !== 'undefined') {
-                  clientState!.submitClient = undefined
-                }
-                if (typeof clientState!.uplinkMessageBuffer !== 'undefined') {
-                  clientState!.uplinkMessageBuffer = []
-                }
-              }
-            }, 500)
-          }
+              }, 500)
+            }
+          })
 
           setTimeout(() => {
             clientState!.uplink = undefined

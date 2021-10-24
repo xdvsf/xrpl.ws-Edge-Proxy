@@ -32,28 +32,38 @@ class HttpServer {
               : null
           },
           uplinkLastMessages: c.uplinkLastMessages,
-          submitClient: {
-            connected: c.submitClient !== undefined,
-            details: c.submitClient === undefined
-              ? {}
-              : {
-                id: c.submitClient.id,
-                uptime: Math.ceil((new Date().getTime() - c.submitClient.connectMoment.getTime()) / 1000),
-                uplinkCount: c.submitClient.uplinkCount,
-                counters: {
-                  messages: c.submitClient.counters,
-                  state: {
-                    queue: this.lengthOrDetails(c.submitClient.uplinkMessageBuffer, req)
+          ...(['nonfhClient', 'submitClient'].reduce((a, clientType) => {
+            const _c = clientType === 'nonfhClient'
+              ? c.nonfhClient
+              : c.submitClient
+
+            Object.assign(a, {
+              [clientType]: {
+                connected: _c !== undefined,
+                details: _c === undefined
+                  ? {}
+                  : {
+                    id: _c.id,
+                    uptime: Math.ceil((new Date().getTime() - _c.connectMoment.getTime()) / 1000),
+                    uplinkCount: _c.uplinkCount,
+                    counters: {
+                      messages: _c.counters,
+                      state: {
+                        queue: this.lengthOrDetails(_c.uplinkMessageBuffer, req)
+                      }
+                    },
+                    uplink: {
+                      state: _c.socket.readyState,
+                      endpoint: _c.uplink
+                        ? _c.uplink!.url
+                        : null
+                    }
                   }
-                },
-                uplink: {
-                  state: c.submitClient.socket.readyState,
-                  endpoint: c.submitClient.uplink
-                    ? c.submitClient.uplink!.url
-                    : null
-                }
               }
-          }
+            })
+
+            return a
+          }, {}))
         }
       })
     }

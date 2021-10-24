@@ -135,6 +135,7 @@ export const Stats = {
 
 type FilterCallbacks = {
   send: Function
+  nonfh: Function
   submit: Function
   reject: Function
 }
@@ -392,7 +393,7 @@ export default (
   if (
     typeof decodedTransaction.TransactionType !== 'undefined'
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
-    && clientState?.uplinkType !== 'submit'
+    && clientState?.uplinkType !== 'submit' && clientState?.uplinkType !== 'nonfh'
   ) {
     // If decodedTransaction is filled, it's a Submit transaction
     // Send to Submit (sub proxy) logic
@@ -404,6 +405,20 @@ export default (
     // )
 
     callback.submit(message)
+  } else if (
+    (data.messageObject?.command || '').toLowerCase()
+    .match(/^(.*subscribe|account_.+|ledger|ledger_closed|ledger_current|book_offers|deposit_authorized|.*path_find)$/)
+    && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
+    && (typeof data.messageObject?.ledger_hash === 'undefined')
+    && (typeof data.messageObject?.ledger_index_min === 'undefined')
+    && (typeof data.messageObject?.ledger_index_max === 'undefined')
+    && (typeof data.messageObject?.forward === 'undefined')
+    && (typeof data.messageObject?.marker === 'undefined')
+    // Don't apply logic if connection is already of submit type (prevent endless recursion)
+    && clientState?.uplinkType !== 'submit' && clientState?.uplinkType !== 'nonfh'
+  ) {
+    log('>>>>>> data.messageObject --- NONFH:', data.messageObject?.command)
+    callback.nonfh(message)
   } else {
     // Send to FH server
 
@@ -413,6 +428,7 @@ export default (
     //   decodedTransaction
     // )
 
+    log('>>>>>> data.messageObject --- FH Normal Send:', data.messageObject?.command)
     callback.send(message)
   }
 
