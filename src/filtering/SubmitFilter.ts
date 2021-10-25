@@ -408,7 +408,7 @@ export default (
     callback.submit(message)
   } else if (
     (data.messageObject?.command || '').toLowerCase()
-      .match(/^(.*subscr.+|account_.+|ledger|ledger_cl.+|ledger_cu.+|book_of.+|deposit_auth.+|ping|.*path_.+)$/)
+      .match(/^(.*subscr.+|account_.+|ledger|ledger_cl.+|ledger_cu.+|book_of.+|deposit_auth.+|.*path_.+)$/)
     && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
     && (data.messageObject?.command.toLowerCase() !== 'account_tx')
     && (typeof data.messageObject?.ledger_hash === 'undefined')
