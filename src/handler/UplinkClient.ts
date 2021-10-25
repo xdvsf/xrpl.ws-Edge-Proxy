@@ -114,6 +114,7 @@ class UplinkClient extends WebSocket {
     })
 
     this.on('message', data => {
+      let dataString = data.toString()
       clearTimeout(this.connectTimeout)
 
       if (typeof clientState !== 'undefined' && clientState!.closed) {
@@ -128,13 +129,20 @@ class UplinkClient extends WebSocket {
         return
       }
 
-      const firstPartOfMessage = data.toString().slice(0, 100).trim()
+      const firstPartOfMessage = dataString.slice(0, 1024).trim()
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
-        logMsg(`{${clientState!.id}} ` + 'Message from ', endpoint, ':', firstPartOfMessage)
+        const ledgerRangeMatch = dataString.match(/validated_ledgers.+?([0-9,-]+)/)
+        if (ledgerRangeMatch) {
+          const newLedgerRange = `32570-${ledgerRangeMatch[1].split('-').reverse()[0].split(',').reverse()[0]}`
+          logMsg(`LEDGER RANGE received: ${ledgerRangeMatch[1]}, update to: ${newLedgerRange}`)
+          dataString = dataString.replace(ledgerRangeMatch[1], newLedgerRange)
+        }
+        logMsg(`{${clientState!.id}} ` + 'Message from ', endpoint, ':', firstPartOfMessage.slice(0, 256))
+        // logMsg(`{${clientState!.id}} ` + 'Message from ', endpoint, ':', JSON.parse(dataString))
         metrics.messages.inc()
         this.clientState!.counters.rxCount++
-        this.clientState!.counters.rxSize += data.toString().length
-        this.clientState!.socket.send(data)
+        this.clientState!.counters.rxSize += dataString.length
+        this.clientState!.socket.send(dataString)
       } else {
         if (firstPartOfMessage.match(/CONNECTION_PING_TEST/)) {
           logMsg(`MSG (PING_TEST) {${clientState!.id}:${
@@ -302,7 +310,7 @@ class UplinkClient extends WebSocket {
 
       super.send(message)
     } else {
-      if (!message.slice(0, 100).match(/NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION/)) {
+      if (!message.slice(0, 1024).match(/NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION/)) {
         log('UplinkClient sent message: UPLINK NOT CONNECTED YET. Added to buffer.')
         this?.clientState?.uplinkMessageBuffer.push(message)
         if (Array.isArray(this?.clientState?.uplinkMessageBuffer)) {
