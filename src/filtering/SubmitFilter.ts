@@ -8,6 +8,7 @@ import Codec from 'ripple-binary-codec'
 import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'
 
 const log = Debug('app').extend('filter')
+const txroutelog = log.extend('txrouting')
 
 log('Init Proxy MessageFilter')
 
@@ -418,7 +419,7 @@ export default (
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
     && clientState?.uplinkType !== 'submit' && clientState?.uplinkType !== 'nonfh'
   ) {
-    log('>>>>>> data.messageObject --- NONFH:', data.messageObject?.command)
+    txroutelog('>>>>>> --- NONFH:', data.messageObject?.command, data.messageObject)
     callback.nonfh(message)
   } else {
     // Send to FH server
@@ -429,7 +430,7 @@ export default (
     //   decodedTransaction
     // )
 
-    log('>>>>>> data.messageObject --- FH Normal Send:', data.messageObject?.command)
+    txroutelog('>>>>>> ---    FH:', data.messageObject?.command, data.messageObject)
     callback.send(message)
   }
 
