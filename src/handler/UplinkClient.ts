@@ -8,8 +8,10 @@ import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'
 import {Client} from './types'
 import io from '@pm2/io'
 
-const maxErrorsBeforePenalty = 1
-const penaltyDurationSec = 90
+const maxErrorsBeforePenalty = 5
+const penaltyDurationSec = 120
+
+const maxPongTimeout = 30
 
 const metrics = {
   messages: io.counter({name: '# messages'})
@@ -49,30 +51,15 @@ class UplinkClient extends WebSocket {
     this.connectTimeout = setTimeout(() => {
       log(`Close. Connection timeout. - Penalties (before):`, {penalties})
 
-      if (Object.keys(penalties).indexOf(endpoint) < 0) {
-        penalties[endpoint] = {count: 0, last: 0, is: false}
+      this.penalty(endpoint)
+
+      if (process.env?.LOGCLOSE) {
+        log('C__9')
       }
-
-      penalties[endpoint].count++
-      log(`Penalty ${endpoint} is now ${penalties[endpoint].count}`)
-      penalties[endpoint].last = Math.round(new Date().getTime() / 1000)
-
-      if (penalties[endpoint].count > maxErrorsBeforePenalty) {
-        penalties[endpoint].is = true
-        const penaltyDetails = {
-          endpoint,
-          ip: clientState?.ip,
-          uplinkCount: clientState?.uplinkCount || 0
-        }
-        // log('Endpoint Penalty', penaltyDetails)
-        SDLogger('Endpoint Penalty', penaltyDetails, SDLoggerSeverity.NOTICE)
-      }
-
       this.close()
-    }, 7.5 * 1000)
+    }, 17.5 * 1000)
 
     this.on('open', () => {
-      clearTimeout(this.connectTimeout)
       this.pingInterval = setInterval(() => {
         this.send(JSON.stringify({id: 'CONNECTION_PING_TEST', command: 'ping'}))
       }, 2500)
@@ -94,6 +81,10 @@ class UplinkClient extends WebSocket {
     })
 
     this.on('close', () => {
+      if (process.env?.LOGCLOSE) {
+        log('C__14')
+      }
+
       clearTimeout(this.connectTimeout)
       clearTimeout(this.pongTimeout)
       clearInterval(this.pingInterval)
@@ -121,6 +112,9 @@ class UplinkClient extends WebSocket {
         // Client is gone.
         log(`CLIENT {${clientState!.id}} GONE - kill uplink`)
         this.closedOnPurpose = true
+        if (process.env?.LOGCLOSE) {
+          log('C__10')
+        }
         this.close()
 
         clearTimeout(this.pongTimeout)
@@ -130,9 +124,16 @@ class UplinkClient extends WebSocket {
       }
 
       const firstPartOfMessage = dataString.slice(0, 1024).trim()
+      if (firstPartOfMessage.match(/ledger_index|complete_ledgers/)) {
+        this.connectionIsSane()
+      }
+
+      this.startPongTimeout(clientState, endpoint)
+
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
         const ledgerRangeMatch = dataString.match(/validated_ledgers.+?([0-9,-]+)/)
         if (ledgerRangeMatch) {
+          this.connectionIsSane()
           const newLedgerRange = `32570-${ledgerRangeMatch[1].split('-').reverse()[0].split(',').reverse()[0]}`
           logMsg(`LEDGER RANGE received: ${ledgerRangeMatch[1]}, update to: ${newLedgerRange}`)
           dataString = dataString.replace(ledgerRangeMatch[1], newLedgerRange)
@@ -145,17 +146,12 @@ class UplinkClient extends WebSocket {
         this.clientState!.socket.send(dataString)
       } else {
         if (firstPartOfMessage.match(/CONNECTION_PING_TEST/)) {
+          this.connectionIsSane()
           logMsg(`MSG (PING_TEST) {${clientState!.id}:${
             clientState!.closed
               ? 'closed'
               : 'open'
           }} ${endpoint}, ${firstPartOfMessage}`)
-          clearTimeout(this.pongTimeout)
-          this.pongTimeout = setTimeout(() => {
-            log(`{${clientState!.id}} ` +
-              `!! Not received a PONG for some time (15sec), assume uplink ${endpoint} GONE`)
-            this.close()
-          }, 15 * 1000)
         }
       }
     })
@@ -169,6 +165,8 @@ class UplinkClient extends WebSocket {
       clearTimeout(this.pongTimeout)
       clearInterval(this.pingInterval)
 
+      this.penalty(endpoint)
+
       if (!error.message.match(/closed before.+established/)) {
         log(`{${clientState!.id}} ` + 'UPLINK CONNECTION ERROR', endpoint, ': ', error.message)
       }
@@ -180,19 +178,51 @@ class UplinkClient extends WebSocket {
         penalties[endpoint].last = 0
         penalties[endpoint].count = 0
         penalties[endpoint].is = false
-        log(`Penalty ${endpoint} is now removed`)
+        log(`_______________ Penalty ${endpoint} is now removed`)
       }
 
       clearTimeout(this.connectTimeout)
       clearTimeout(this.pongTimeout)
       clearInterval(this.pingInterval)
 
-      log(`UPLINK TEMP PENALTY: CLOSE {${clientState!.id}} @ ${endpoint}`)
+      log(`_________________ UPLINK TEMP PENALTY: CLOSE {${clientState!.id}} @ ${endpoint}`)
+      if (process.env?.LOGCLOSE) {
+        log('C__12')
+      }
+
       this.close()
     }
 
 
     this.clientState.uplinkCount++
+  }
+
+  penalty (endpoint: string): void {
+    if (Object.keys(penalties).indexOf(endpoint) < 0) {
+      penalties[endpoint] = {count: 0, last: 0, is: false}
+    }
+
+    penalties[endpoint].count++
+    log(`Penalty ${endpoint} is now ${penalties[endpoint].count}`)
+    penalties[endpoint].last = Math.round(new Date().getTime() / 1000)
+
+    if (penalties[endpoint].count > maxErrorsBeforePenalty) {
+      penalties[endpoint].is = true
+      const penaltyDetails = {
+        endpoint,
+        ip: this.clientState?.ip,
+        uplinkCount: this.clientState?.uplinkCount || 0
+      }
+      // log('Endpoint Penalty', penaltyDetails)
+      SDLogger('Endpoint Penalty', penaltyDetails, SDLoggerSeverity.NOTICE)
+    }
+  }
+
+  connectionIsSane (): void {
+    if (process.env?.LOGCLOSE) {
+      log('Connection is sane :)', this.clientState?.preferredServer)
+    }
+    clearTimeout(this.connectTimeout) // Connection is functional
   }
 
   getId (): number {
@@ -207,11 +237,33 @@ class UplinkClient extends WebSocket {
     if (typeof code !== 'undefined' && typeof data !== 'undefined' && data === 'ON_PURPOSE') {
       this.closedOnPurpose = true
     }
+    if (typeof data === 'string' && data.split(':')[0] === 'NO_MESSAGE_TIMEOUT') {
+      this.penalty(data.split(':').slice(1).join(':'))
+    }
+
     try {
+      if (process.env?.LOGCLOSE) {
+        log('C__13')
+      }
       super.close()
     } catch (e) {
       log(`{${this.clientState!.id}} ` + '!! WS Close ERROR', e.message)
     }
+  }
+
+  startPongTimeout (clientState: Client, endpoint: string): void {
+    clearTimeout(this.pongTimeout)
+
+    this.pongTimeout = setTimeout(() => {
+      this.penalty(endpoint)
+
+      log(`{${clientState!.id}} ` +
+        `!! Not received a PONG for some time (${maxPongTimeout} sec), assume uplink ${endpoint} GONE`)
+      if (process.env?.LOGCLOSE) {
+        log('C__11')
+      }
+      this.close()
+    }, maxPongTimeout * 1000)
   }
 
   send (message: string) {
@@ -315,18 +367,28 @@ class UplinkClient extends WebSocket {
         this?.clientState?.uplinkMessageBuffer.push(message)
         if (Array.isArray(this?.clientState?.uplinkMessageBuffer)) {
           if (Array(this.clientState!.uplinkMessageBuffer).length > 1000) {
-            log('Clearing ClientState, buffer > 1000')
+            if (process.env?.LOGCLOSE) {
+              log('Clearing ClientState, buffer > 1000')
+            }
             try {
+              if (process.env?.LOGCLOSE) {
+                log('C__8')
+              }
               this.clientState!.socket.close()
               this.clientState!.uplink!.close()
             } catch (e) {
-              //
+              log('!!!!! >', e.message)
             }
           }
         }
       }
     }
   }
+}
+
+export {
+  UplinkClient,
+  penalties
 }
 
 export default UplinkClient

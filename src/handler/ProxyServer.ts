@@ -274,6 +274,9 @@ class ProxyServer {
       })
 
       newUplink.on('close', () => {
+        if (process.env?.LOGCLOSE) {
+          log('C__15')
+        }
         setTimeout(() => {
           newUplink = undefined
         }, 5000)
@@ -288,13 +291,18 @@ class ProxyServer {
 
         const killNewUplinkTimeout = setTimeout(() => {
           try {
-            newUplink!.close(0, 'ON_PURPOSE')
+            if (process.env?.LOGCLOSE) {
+              log('C__3')
+            }
+            // Don't do "on purpose", no new uplink will be selected
+            // newUplink!.close(0, 'ON_PURPOSE')
+            newUplink!.close(0, 'NO_MESSAGE_TIMEOUT:' + clientState.preferredServer)
             newUplink = undefined
           } catch (e) {
             log('X1', e)
           }
-          log(`{${clientState!.id}} !!! No incoming message within 10 sec from new uplink ${newUplink?.url}, close`)
-        }, 10 * 1000)
+          log(`{${clientState!.id}} !!! No incoming message within 8 sec from new uplink ${newUplink?.url}, close`)
+        }, 8 * 1000)
 
         newUplink!.once('message', m => {
           log(`{${clientState!.id}} >> Got first message from uplink. First health check OK.`)
@@ -318,6 +326,9 @@ class ProxyServer {
             if (typeof clientState.uplink !== 'undefined') {
               log(`{${clientState!.id}} Switch uplinks. ` +
                 `${clientState.uplink?.url} disconnects, ${newUplink?.url} connects`)
+              if (process.env?.LOGCLOSE) {
+                log('C__4')
+              }
               clientState.uplink.close(0, 'ON_PURPOSE')
               clientState.uplink = undefined
             }
@@ -352,6 +363,9 @@ class ProxyServer {
             }
           } else {
             try {
+              if (process.env?.LOGCLOSE) {
+                log('C__5')
+              }
               newUplink!.close(0, 'ON_PURPOSE')
               log(`{${clientState!.id}} ${newUplink?.url} connected, but id expired`
                 + ` (got ${newUplink!.getId()}, is at ${clientState.uplinkCount}). Closing.`)
@@ -396,6 +410,9 @@ class ProxyServer {
         }, SDLoggerSeverity.ALERT)
 
         try {
+          if (process.env?.LOGCLOSE) {
+            log('C__6')
+          }
           ws.close(1008, reason)
         } catch (e) {
           log('X4', e)
@@ -550,10 +567,16 @@ class ProxyServer {
 
         ws.on('error', e => {
           log(`!!! ws error`, e)
+          if (process.env?.LOGCLOSE) {
+            log('C__7')
+          }
           ws.close()
         })
 
         ws.on('close', (code: number, reason: string) => {
+          if (process.env?.LOGCLOSE) {
+            log('C__16')
+          }
           clientState!.closed = true
 
           const thisClient = this.Clients.filter(c => {
@@ -571,6 +594,9 @@ class ProxyServer {
 
           if (typeof clientState !== 'undefined') {
             if (typeof clientState!.uplink !== 'undefined') {
+              if (process.env?.LOGCLOSE) {
+                log('C__1')
+              }
               clientState!.uplink.close()
             }
             if (typeof clientState!.uplinkMessageBuffer !== 'undefined') {
@@ -585,6 +611,9 @@ class ProxyServer {
             if (typeof c !== 'undefined') {
               c.closed = true
               if (typeof c!.uplink !== 'undefined') {
+                if (process.env?.LOGCLOSE) {
+                  log('C__2')
+                }
                 c!.uplink.close()
               }
               setTimeout(() => {

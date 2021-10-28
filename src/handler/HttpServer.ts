@@ -2,6 +2,7 @@
 
 import Debug from 'debug'
 import {ProxyServer} from './'
+import {penalties} from './UplinkClient'
 import {Client} from './types'
 import {Request, Response} from 'express'
 import {Stats as ProxyMessageFilterStats} from '../filtering/SubmitFilter'
@@ -126,7 +127,8 @@ class HttpServer {
           count: proxy.getClients().length,
           clientDetails: getClientMap(proxy.getClients(), req),
           filter: ProxyMessageFilterStats
-        }
+        },
+        penalties
       })
     })
   }
