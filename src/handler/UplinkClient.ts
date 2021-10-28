@@ -1,9 +1,11 @@
 'use strict'
 
+import crypto from 'crypto'
 import Debug from 'debug'
 import WebSocket from 'ws'
 const log = Debug('app')
 const logMsg = Debug('msg')
+import ProxyServer from './ProxyServer'
 import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'
 import {Client} from './types'
 import io from '@pm2/io'
@@ -36,20 +38,30 @@ class UplinkClient extends WebSocket {
   private connectTimeout: any
   private pingInterval: any
   private pongTimeout: any
+  private proxy: ProxyServer
+  private socketDebugMessages = false
 
-  constructor (clientState: Client, endpoint: string) {
+  constructor (clientState: Client, endpoint: string, proxy: ProxyServer) {
     // super(UplinkServers.basic)
     super(endpoint, {headers: {'X-Forwarded-For': clientState.ip, 'X-User': clientState.ip}})
 
     log(`{${clientState!.id}} ` + `Construct new UplinkClient to ${endpoint}`)
+    if ((clientState?.request?.url || '').match(/state|debug/)) {
+      this.socketDebugMessages = true
+      this.sendSocketDebugMessage(JSON.stringify({endpoint}))
+    }
 
     this.clientState = clientState
     this.id = clientState.uplinkCount + 1
+    this.proxy = proxy
+
+    this.cleanPenalties()
 
     // log(penalties)
 
     this.connectTimeout = setTimeout(() => {
       log(`Close. Connection timeout. - Penalties (before):`, {penalties})
+      this.sendSocketDebugMessage(JSON.stringify({endpoint, message: 'Connection timeout'}))
 
       this.penalty(endpoint)
 
@@ -60,9 +72,11 @@ class UplinkClient extends WebSocket {
     }, 7.5 * 1000)
 
     this.on('open', () => {
+      this.startPongTimeout(clientState, endpoint)
+
       this.pingInterval = setInterval(() => {
         this.send(JSON.stringify({id: 'CONNECTION_PING_TEST', command: 'ping'}))
-      }, 2500)
+      }, 5 * 1000)
 
       log(`{${clientState!.id}} ` + 'UplinkClient connected to ', endpoint)
       log(`{${clientState!.id}} ` + 'Subscriptions to replay ', this.clientState!.uplinkSubscriptions.length)
@@ -90,6 +104,8 @@ class UplinkClient extends WebSocket {
       clearInterval(this.pingInterval)
 
       log(`{${clientState!.id}} ` + '>> UplinkClient disconnected from ', endpoint)
+      this.sendSocketDebugMessage(JSON.stringify({endpoint, message: 'Uplink disconnected'}))
+
       if (this.clientState!.closed) {
         log(`{${clientState!.id}} ` + `     -> Don't reconnect, client gone`)
       } else {
@@ -99,6 +115,7 @@ class UplinkClient extends WebSocket {
           log(`{${clientState!.id}} ` +
             '     -> [NOT ON PURPOSE] Client still here - Instruct parent to find new uplink')
           this.emit('gone')
+          this.sendSocketDebugMessage(JSON.stringify({endpoint, message: 'Find new uplink'}))
         }
       }
       // this.clientState = undefined
@@ -128,8 +145,6 @@ class UplinkClient extends WebSocket {
         this.connectionIsSane()
       }
 
-      this.startPongTimeout(clientState, endpoint)
-
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
         const ledgerRangeMatch = dataString.match(/validated_ledgers.+?([0-9,-]+)/)
         if (ledgerRangeMatch) {
@@ -138,6 +153,7 @@ class UplinkClient extends WebSocket {
           logMsg(`LEDGER RANGE received: ${ledgerRangeMatch[1]}, update to: ${newLedgerRange}`)
           dataString = dataString.replace(ledgerRangeMatch[1], newLedgerRange)
         }
+
         logMsg(`{${clientState!.id}} ` + 'Message from ', endpoint, ':', firstPartOfMessage.slice(0, 256))
         // logMsg(`{${clientState!.id}} ` + 'Message from ', endpoint, ':', JSON.parse(dataString))
         metrics.messages.inc()
@@ -146,7 +162,8 @@ class UplinkClient extends WebSocket {
         this.clientState!.socket.send(dataString)
       } else {
         if (firstPartOfMessage.match(/CONNECTION_PING_TEST/)) {
-          this.connectionIsSane()
+          this.startPongTimeout(clientState, endpoint)
+
           logMsg(`MSG (PING_TEST) {${clientState!.id}:${
             clientState!.closed
               ? 'closed'
@@ -169,18 +186,12 @@ class UplinkClient extends WebSocket {
 
       if (!error.message.match(/closed before.+established/)) {
         log(`{${clientState!.id}} ` + 'UPLINK CONNECTION ERROR', endpoint, ': ', error.message)
+        this.sendSocketDebugMessage(JSON.stringify({endpoint, message: 'Uplink connection error'}))
       }
     })
 
     // Penalties
     if (Object.keys(penalties).indexOf(endpoint) > -1 && penalties[endpoint].is) {
-      if (Math.round(new Date().getTime() / 1000) - penalties[endpoint].last > penaltyDurationSec) {
-        penalties[endpoint].last = 0
-        penalties[endpoint].count = 0
-        penalties[endpoint].is = false
-        log(`_______________ Penalty ${endpoint} is now removed`)
-      }
-
       clearTimeout(this.connectTimeout)
       clearTimeout(this.pongTimeout)
       clearInterval(this.pingInterval)
@@ -193,8 +204,15 @@ class UplinkClient extends WebSocket {
       this.close()
     }
 
-
     this.clientState.uplinkCount++
+  }
+
+  sendSocketDebugMessage (message: string): void {
+    try {
+      this.clientState?.socket.send(message)
+    } catch (e) {
+      //
+    }
   }
 
   penalty (endpoint: string): void {
@@ -213,9 +231,31 @@ class UplinkClient extends WebSocket {
         ip: this.clientState?.ip,
         uplinkCount: this.clientState?.uplinkCount || 0
       }
+
+      // Enter maintenance mode
+      const hash = crypto.createHash('md5').update(endpoint).digest('hex')
+      this.proxy.updateUplinkServer(hash, 'migrate')
+      log('___| Penalty > maxErrors, migrate clients', endpoint)
+
       // log('Endpoint Penalty', penaltyDetails)
       SDLogger('Endpoint Penalty', penaltyDetails, SDLoggerSeverity.NOTICE)
     }
+  }
+
+  cleanPenalties (): void {
+    Object.keys(penalties).forEach(endpoint => {
+      if (Math.round(new Date().getTime() / 1000) - penalties[endpoint].last > penaltyDurationSec) {
+        if (penalties[endpoint].last > 0) {
+          penalties[endpoint].last = 0
+          penalties[endpoint].count = 0
+          penalties[endpoint].is = false
+          log(`_______________ Penalty ${endpoint} is now removed -- exit maintenance mode`)
+          // Exit maintenance mode
+          const hash = crypto.createHash('md5').update(endpoint).digest('hex')
+          this.proxy.updateUplinkServer(hash, 'up')
+        }
+      }
+    })
   }
 
   connectionIsSane (): void {
@@ -262,6 +302,7 @@ class UplinkClient extends WebSocket {
       if (process.env?.LOGCLOSE) {
         log('C__11')
       }
+      this.sendSocketDebugMessage(JSON.stringify({endpoint, message: 'Ping/Pong timeout'}))
       this.close()
     }, maxPongTimeout * 1000)
   }

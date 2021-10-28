@@ -241,7 +241,7 @@ class ProxyServer {
       }
     }
     if (!clientState.closed) {
-      let newUplink: UplinkClient | undefined = new UplinkClient(clientState, clientState.preferredServer)
+      let newUplink: UplinkClient | undefined = new UplinkClient(clientState, clientState.preferredServer, this)
       /**
        * 'gone' event only emits if NOT closed on purpose
        */
@@ -306,6 +306,14 @@ class ProxyServer {
 
         newUplink!.once('message', m => {
           log(`{${clientState!.id}} >> Got first message from uplink. First health check OK.`)
+
+          if ((clientState?.request?.url || '').match(/state|debug/)) {
+            try {
+              clientState?.socket.emit('message', '{"__api":"state"}')
+            } catch (e) {
+              //
+            }
+          }
 
           /**
            * TODO: Opt in notify connected client with 'pseudo messages'
