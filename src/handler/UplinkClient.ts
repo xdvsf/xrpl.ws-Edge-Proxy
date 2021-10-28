@@ -57,7 +57,7 @@ class UplinkClient extends WebSocket {
         log('C__9')
       }
       this.close()
-    }, 17.5 * 1000)
+    }, 7.5 * 1000)
 
     this.on('open', () => {
       this.pingInterval = setInterval(() => {
