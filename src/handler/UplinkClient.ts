@@ -409,9 +409,9 @@ class UplinkClient extends WebSocket {
         log('UplinkClient sent message: UPLINK NOT CONNECTED YET. Added to buffer.')
         this?.clientState?.uplinkMessageBuffer.push(message)
         if (Array.isArray(this?.clientState?.uplinkMessageBuffer)) {
-          if (Array(this.clientState!.uplinkMessageBuffer).length > 1000) {
+          if (Array(this.clientState!.uplinkMessageBuffer).length > 500) {
             if (process.env?.LOGCLOSE) {
-              log('Clearing ClientState, buffer > 1000')
+              log('Clearing ClientState, buffer > 500')
             }
             try {
               if (process.env?.LOGCLOSE) {
