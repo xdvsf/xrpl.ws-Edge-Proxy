@@ -209,7 +209,9 @@ class UplinkClient extends WebSocket {
 
   sendSocketDebugMessage (message: string): void {
     try {
-      this.clientState?.socket.send(message)
+      if (this.socketDebugMessages) {
+        this.clientState?.socket.send(message)
+      }
     } catch (e) {
       //
     }
