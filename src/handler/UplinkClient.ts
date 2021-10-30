@@ -217,12 +217,12 @@ class UplinkClient extends WebSocket {
     }
   }
 
-  penalty (endpoint: string): void {
+  penalty (endpoint: string, weight = 1): void {
     if (Object.keys(penalties).indexOf(endpoint) < 0) {
       penalties[endpoint] = {count: 0, last: 0, is: false}
     }
 
-    penalties[endpoint].count++
+    penalties[endpoint].count += weight
     log(`Penalty ${endpoint} is now ${penalties[endpoint].count}`)
     penalties[endpoint].last = Math.round(new Date().getTime() / 1000)
 
