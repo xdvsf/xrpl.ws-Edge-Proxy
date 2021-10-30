@@ -146,12 +146,22 @@ class UplinkClient extends WebSocket {
       }
 
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
-        const ledgerRangeMatch = dataString.match(/validated_ledgers.+?([0-9,-]+)/)
+        const ledgerRangeMatch = dataString.match(/(validated_ledgers|complete_ledgers).+?([0-9,-]+)/)
         if (ledgerRangeMatch) {
           this.connectionIsSane()
-          const newLedgerRange = `32570-${ledgerRangeMatch[1].split('-').reverse()[0].split(',').reverse()[0]}`
-          logMsg(`LEDGER RANGE received: ${ledgerRangeMatch[1]}, update to: ${newLedgerRange}`)
-          dataString = dataString.replace(ledgerRangeMatch[1], newLedgerRange)
+          if (clientState?.uplinkType === 'basic') {
+            if (ledgerRangeMatch[2].split(',').length > 1 || ledgerRangeMatch[2].split('-')[0] !== '32570') {
+              logMsg('validated_ledgers/complete_ledgers: non FH, FH requested', ledgerRangeMatch[2])
+              if (process.env?.LOGCLOSE) {
+                log('C__20 -- Switch uplink')
+              }
+              this.penalty(endpoint, 2)
+              this.close()
+            }
+          }
+          const newLedgerRange = `32570-${ledgerRangeMatch[2].split('-').reverse()[0].split(',').reverse()[0]}`
+          logMsg(`LEDGER RANGE received: ${ledgerRangeMatch[2]}, update to: ${newLedgerRange}`)
+          dataString = dataString.replace(ledgerRangeMatch[2], newLedgerRange)
         }
 
         logMsg(`{${clientState!.id}} ` + 'Message from ', endpoint, ':', firstPartOfMessage.slice(0, 256))
