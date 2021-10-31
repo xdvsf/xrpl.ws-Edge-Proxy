@@ -86,15 +86,31 @@ class ProxyServer {
       log(`Marking uplink [ ${s.endpoint} ] - ${action.toUpperCase()}`)
       if (action === 'migrate') {
         s.healthy = false
-        const clientsToMigrate = this.getClients().filter(c => {
-          return typeof c.uplink !== 'undefined'
-            && typeof c.uplink.url === 'string'
-            && c.uplink.url === s.endpoint
+
+        let migratedClients = 0
+        this.getClients().forEach(c => {
+          let migrated = false
+          if (c?.uplink?.url === s.endpoint) {
+            log('Migrate normal uplink', s.endpoint, c.id)
+            c.socket.emit('migrate', c)
+            migrated = true
+          }
+          if (c?.nonfhClient?.uplink?.url === s.endpoint) {
+            log('Migrate nonFhClient', s.endpoint, c.id)
+            c.nonfhClient.socket.emit('migrate', c.nonfhClient)
+            migrated = true
+          }
+          if (c?.submitClient?.uplink?.url === s.endpoint) {
+            log('Migrate submitClient', s.endpoint, c.id)
+            c.submitClient.socket.emit('migrate', c.submitClient)
+            migrated = true
+          }
+          if (migrated) {
+            migratedClients++
+          }
         })
-        log(`Migrating [ ${clientsToMigrate.length} clients ] away from ${s.endpoint}`)
-        clientsToMigrate.forEach(c => {
-          c.socket.emit('migrate')
-        })
+
+        log(`Migrated [ ${migratedClients} clients ] away from ${s.endpoint}`)
       }
       if (action === 'down') {
         s.healthy = false
@@ -485,9 +501,13 @@ class ProxyServer {
           }, 2 * 15 * 1000)
         })
 
-        ws.on('migrate', () => {
-          clientState!.preferredServer = this.getUplinkServer(clientState!)
-          this.connectUplink(clientState!)
+        ws.on('migrate', obj => {
+          const c = typeof obj === 'undefined'
+            ? clientState
+            : obj
+
+          c!.preferredServer = this.getUplinkServer(c!)
+          this.connectUplink(c!)
         })
 
         ws.on('message', (message: string) => {
