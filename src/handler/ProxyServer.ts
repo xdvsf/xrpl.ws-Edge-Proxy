@@ -246,8 +246,11 @@ class ProxyServer {
       return possibleServers[Math.floor(Math.random() * possibleServers.length)]
     }
 
-    // TODO: pooling?
-    return 'wss://s2.ripple.com/#fallback'
+    return UplinkServers.filter((r: any) => {
+      return r.type === 'fallback'
+    }).map((r: any) => {
+      return r.endpoint
+    })[0]
   }
 
   connectUplink (clientState: Client): void {
