@@ -419,7 +419,7 @@ export default (
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
     && clientState?.uplinkType !== 'submit' && clientState?.uplinkType !== 'nonfh'
   ) {
-    txroutelog('>>>>>> --- NONFH:', data.messageObject?.command, data.messageObject)
+    txroutelog('------- >>>>>> --- NONFH:', data.messageObject?.command, data.messageObject)
     callback.nonfh(message)
   } else {
     // Send to FH server
@@ -430,7 +430,7 @@ export default (
     //   decodedTransaction
     // )
 
-    txroutelog('>>>>>> ---    FH:', data.messageObject?.command, data.messageObject)
+    txroutelog('------- >>>>>> ---    FH:', data.messageObject?.command, data.messageObject)
     callback.send(message)
   }
 
