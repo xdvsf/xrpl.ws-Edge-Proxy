@@ -43,7 +43,7 @@ class UplinkClient extends WebSocket {
 
   constructor (clientState: Client, endpoint: string, proxy: ProxyServer) {
     // super(UplinkServers.basic)
-    super(endpoint, {headers: {'X-Forwarded-For': clientState.ip, 'X-User': clientState.ip}})
+    super(endpoint, {headers: {'X-Forwarded-For': clientState.ip, 'X-User': 'xrplcluster/' + clientState.ip}})
 
     log(`{${clientState!.id}} ` + `Construct new UplinkClient to ${endpoint}`)
     if ((clientState?.request?.url || '').match(/state|debug/)) {
