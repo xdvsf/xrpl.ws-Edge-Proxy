@@ -137,6 +137,7 @@ export const Stats = {
 type FilterCallbacks = {
   send: Function
   nonfh: Function
+  reporting: Function
   submit: Function
   reject: Function
 }
@@ -394,7 +395,9 @@ export default (
   if (
     typeof decodedTransaction.TransactionType !== 'undefined'
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
-    && clientState?.uplinkType !== 'submit' && clientState?.uplinkType !== 'nonfh'
+    && clientState?.uplinkType !== 'submit'
+    && clientState?.uplinkType !== 'nonfh'
+    && clientState?.uplinkType !== 'reporting'
   ) {
     // If decodedTransaction is filled, it's a Submit transaction
     // Send to Submit (sub proxy) logic
@@ -407,6 +410,14 @@ export default (
 
     callback.submit(message)
   } else if (
+    (data.messageObject?.command || '').toLowerCase().match(/tx|transac|lines|account_objects|ledger_data|ledger_entry/)
+    && clientState?.uplinkType !== 'submit'
+    && clientState?.uplinkType !== 'nonfh'
+    && clientState?.uplinkType !== 'reporting'
+  ) {
+    txroutelog('------- >>>>>> --- REPORTING:', data.messageObject?.command, data.messageObject)
+    callback.reporting(message)
+  } else if (
     (data.messageObject?.command || '').toLowerCase()
       .match(/^(account_.+|ledger|ledger_cl.+|ledger_cu.+|book_of.+|deposit_auth.+|.*path_.+)$/)
     && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
@@ -417,7 +428,9 @@ export default (
     && (typeof data.messageObject?.forward === 'undefined')
     && (typeof data.messageObject?.marker === 'undefined')
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
-    && clientState?.uplinkType !== 'submit' && clientState?.uplinkType !== 'nonfh'
+    && clientState?.uplinkType !== 'submit'
+    && clientState?.uplinkType !== 'nonfh'
+    && clientState?.uplinkType !== 'reporting'
   ) {
     txroutelog('------- >>>>>> --- NONFH:', data.messageObject?.command, data.messageObject)
     callback.nonfh(message)

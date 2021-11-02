@@ -12,6 +12,7 @@ type Client = {
   socket: WebSocket
   uplink?: UplinkClient
   submitClient?: Client
+  reportingClient?: Client
   nonfhClient?: Client
   uplinkCount: number
   uplinkMessageBuffer: string[]

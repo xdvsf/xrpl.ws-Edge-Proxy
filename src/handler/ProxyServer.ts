@@ -100,6 +100,11 @@ class ProxyServer {
             c.nonfhClient.socket.emit('migrate', c.nonfhClient)
             migrated = true
           }
+          if (c?.reportingClient?.uplink?.url === s.endpoint) {
+            log('Migrate reportingClient', s.endpoint, c.id)
+            c.reportingClient.socket.emit('migrate', c.reportingClient)
+            migrated = true
+          }
           if (c?.submitClient?.uplink?.url === s.endpoint) {
             log('Migrate submitClient', s.endpoint, c.id)
             c.submitClient.socket.emit('migrate', c.submitClient)
@@ -188,6 +193,9 @@ class ProxyServer {
         }
         if (uplinkType === 'nonfh') {
           client = clientState?.nonfhClient
+        }
+        if (uplinkType === 'reporting') {
+          client = clientState?.reportingClient
         }
       }
 
@@ -376,6 +384,9 @@ class ProxyServer {
                     },
                     nonfh: (safeData: string): void => {
                       this.specialTxRelay(clientState, safeData, 'nonfh')
+                    },
+                    reporting: (safeData: string): void => {
+                      this.specialTxRelay(clientState, safeData, 'reporting')
                     },
                     submit: (safeData: string): void => {
                       this.specialTxRelay(clientState, safeData, 'submit')
@@ -574,6 +585,9 @@ class ProxyServer {
                   nonfh: (safeData: string): void => {
                     this.specialTxRelay(clientState!, safeData, 'nonfh')
                   },
+                  reporting: (safeData: string): void => {
+                    this.specialTxRelay(clientState!, safeData, 'reporting')
+                  },
                   submit: (safeData: string): void => {
                     this.specialTxRelay(clientState!, safeData, 'submit')
                   },
@@ -638,7 +652,7 @@ class ProxyServer {
           clearInterval(pingInterval)
           clearTimeout(pingTimeout)
 
-          ;[(clientState!.submitClient), (clientState!.nonfhClient)].forEach(c => {
+          ;[(clientState!.submitClient), (clientState!.nonfhClient), (clientState!.reportingClient)].forEach(c => {
             if (typeof c !== 'undefined') {
               c.closed = true
               if (typeof c!.uplink !== 'undefined') {
