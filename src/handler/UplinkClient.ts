@@ -43,7 +43,12 @@ class UplinkClient extends WebSocket {
 
   constructor (clientState: Client, endpoint: string, proxy: ProxyServer) {
     // super(UplinkServers.basic)
-    super(endpoint, {headers: {'X-Forwarded-For': clientState.ip, 'X-User': 'xrplcluster/' + clientState.ip}})
+    super(endpoint, {
+      headers: {
+        'X-Forwarded-For': clientState.ip.split(',')[0],
+        'X-User': 'xrplcluster/' + clientState.ip
+      }
+    })
 
     log(`{${clientState!.id}} ` + `Construct new UplinkClient to ${endpoint}`)
     if ((clientState?.request?.url || '').match(/state|debug/)) {
@@ -227,29 +232,32 @@ class UplinkClient extends WebSocket {
   }
 
   penalty (endpoint: string, weight = 1): void {
-    if (Object.keys(penalties).indexOf(endpoint) < 0) {
-      penalties[endpoint] = {count: 0, last: 0, is: false}
-    }
-
-    penalties[endpoint].count += weight
-    log(`Penalty ${endpoint} is now ${penalties[endpoint].count}`)
-    penalties[endpoint].last = Math.round(new Date().getTime() / 1000)
-
-    if (penalties[endpoint].count > maxErrorsBeforePenalty) {
-      penalties[endpoint].is = true
-      const penaltyDetails = {
-        endpoint,
-        ip: this.clientState?.ip,
-        uplinkCount: this.clientState?.uplinkCount || 0
+    // No penalty for reporting mode
+    if (this.clientState?.uplinkType !== 'reporting') {
+      if (Object.keys(penalties).indexOf(endpoint) < 0) {
+        penalties[endpoint] = {count: 0, last: 0, is: false}
       }
 
-      // Enter maintenance mode
-      const hash = crypto.createHash('md5').update(endpoint).digest('hex')
-      this.proxy.updateUplinkServer(hash, 'migrate')
-      log('___| Penalty > maxErrors, migrate clients', endpoint)
+      penalties[endpoint].count += weight
+      log(`Penalty ${endpoint} is now ${penalties[endpoint].count}`)
+      penalties[endpoint].last = Math.round(new Date().getTime() / 1000)
 
-      // log('Endpoint Penalty', penaltyDetails)
-      SDLogger('Endpoint Penalty', penaltyDetails, SDLoggerSeverity.NOTICE)
+      if (penalties[endpoint].count > maxErrorsBeforePenalty) {
+        penalties[endpoint].is = true
+        const penaltyDetails = {
+          endpoint,
+          ip: this.clientState?.ip,
+          uplinkCount: this.clientState?.uplinkCount || 0
+        }
+
+        // Enter maintenance mode
+        const hash = crypto.createHash('md5').update(endpoint).digest('hex')
+        this.proxy.updateUplinkServer(hash, 'migrate')
+        log('___| Penalty > maxErrors, migrate clients', endpoint)
+
+        // log('Endpoint Penalty', penaltyDetails)
+        SDLogger('Endpoint Penalty', penaltyDetails, SDLoggerSeverity.NOTICE)
+      }
     }
   }
 
