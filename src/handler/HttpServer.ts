@@ -9,22 +9,34 @@ import {Stats as ProxyMessageFilterStats} from '../filtering/SubmitFilter'
 const log = Debug('app').extend('HttpServer')
 const logAdmin = log.extend('Admin')
 
+// http://localhost:4001/status?counters=true&headers=true&noclients=true
+
 class HttpServer {
   constructor (app: any, proxy: ProxyServer) {
     const getClientMap = (Clients: Array<Client>, req: Request) => {
       return Clients.map(c => {
+        const headers = Object.keys(req.query).indexOf('headers') > -1
+          ? {headers: c.headers}
+          : {}
+
+        const counters = Object.keys(req.query).indexOf('counters') > -1
+          ? {
+            counters: {
+              messages: c.counters,
+              state: {
+                queue: this.lengthOrDetails(c.uplinkMessageBuffer, req),
+                subscriptions: this.lengthOrDetails(c.uplinkSubscriptions, req)
+              }
+            }
+          }
+          : {}
+
         return {
           id: c.id,
           ip: c.ip,
           uptime: Math.ceil((new Date().getTime() - c.connectMoment.getTime()) / 1000),
-          counters: {
-            messages: c.counters,
-            state: {
-              queue: this.lengthOrDetails(c.uplinkMessageBuffer, req),
-              subscriptions: this.lengthOrDetails(c.uplinkSubscriptions, req)
-            }
-          },
-          headers: c.headers,
+          ...counters,
+          ...headers,
           uplinkCount: c.uplinkCount,
           uplink: {
             state: c.socket.readyState,
@@ -33,10 +45,13 @@ class HttpServer {
               : null
           },
           uplinkLastMessages: c.uplinkLastMessages,
-          ...(['nonfhClient', 'submitClient'].reduce((a, clientType) => {
-            const _c = clientType === 'nonfhClient'
-              ? c.nonfhClient
-              : c.submitClient
+          ...(['nonfhClient', 'submitClient', 'reportingClient'].reduce((a, clientType) => {
+            const _c = clientType === 'nonfhClient' ? c.nonfhClient
+              : (clientType === 'submitClient' ? c.submitClient : c.reportingClient)
+
+            const ccounters = _c && Object.keys(req.query).indexOf('counters') > -1
+              ? {messages: _c.counters}
+              : {}
 
             Object.assign(a, {
               [clientType]: {
@@ -48,7 +63,7 @@ class HttpServer {
                     uptime: Math.ceil((new Date().getTime() - _c.connectMoment.getTime()) / 1000),
                     uplinkCount: _c.uplinkCount,
                     counters: {
-                      messages: _c.counters,
+                      ...ccounters,
                       state: {
                         queue: this.lengthOrDetails(_c.uplinkMessageBuffer, req)
                       }
@@ -117,6 +132,9 @@ class HttpServer {
 
     app.get('/status', (req: Request, res: Response) => {
       logAdmin('-- ADMIN STATUS --')
+      const clientDetails = Object.keys(req.query).indexOf('noclients') > -1
+        ? {}
+        : {clientDetails: getClientMap(proxy.getClients(), req)}
       res.json({
         clients: {
           call: {
@@ -125,7 +143,7 @@ class HttpServer {
           },
           uplinks: proxy.getUplinkServers(),
           count: proxy.getClients().length,
-          clientDetails: getClientMap(proxy.getClients(), req),
+          clientDetails,
           filter: ProxyMessageFilterStats
         },
         penalties
