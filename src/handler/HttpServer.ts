@@ -143,7 +143,7 @@ class HttpServer {
           },
           uplinks: proxy.getUplinkServers(),
           count: proxy.getClients().length,
-          clientDetails,
+          ...clientDetails,
           filter: ProxyMessageFilterStats
         },
         penalties
