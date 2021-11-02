@@ -173,12 +173,11 @@ class UplinkClient extends WebSocket {
       } else {
         if (firstPartOfMessage.match(/CONNECTION_PING_TEST/)) {
           this.startPongTimeout(clientState, endpoint)
-
-          logMsg(`MSG (PING_TEST) {${clientState!.id}:${
-            clientState!.closed
-              ? 'closed'
-              : 'open'
-          }} ${endpoint}, ${firstPartOfMessage}`)
+          // logMsg(`MSG (PING_TEST) {${clientState!.id}:${
+          //   clientState!.closed
+          //     ? 'closed'
+          //     : 'open'
+          // }} ${endpoint}, ${firstPartOfMessage}`)
         }
       }
     })
