@@ -151,6 +151,19 @@ class UplinkClient extends WebSocket {
       }
 
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
+        if (
+          (firstPartOfMessage.match(/lgrIdxsInvalid/) && firstPartOfMessage.match(/Ledger indexes invalid/)) ||
+          (firstPartOfMessage.match(/:73,/) && firstPartOfMessage.match(/Internal error/))
+        ) {
+          // Server is having trouble
+          logMsg('Server is having (temp) unrecoverable problems, switch uplink')
+          if (process.env?.LOGCLOSE) {
+            log('C__40 -- Switch uplink')
+          }
+          this.penalty(endpoint, 20)
+          this.close()
+        }
+
         const ledgerRangeMatch = dataString.match(/(validated_ledgers|complete_ledgers).+?([0-9,-]+)/)
         if (ledgerRangeMatch) {
           this.connectionIsSane()
