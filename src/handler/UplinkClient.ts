@@ -152,8 +152,9 @@ class UplinkClient extends WebSocket {
 
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
         if (
-          (firstPartOfMessage.match(/lgrIdxsInvalid/) && firstPartOfMessage.match(/Ledger indexes invalid/)) ||
-          (firstPartOfMessage.match(/:73,/) && firstPartOfMessage.match(/Internal error/))
+          (firstPartOfMessage.match(/lgrIdxsInvalid/) && firstPartOfMessage.match(/Ledger indexes invalid/))
+          // Internal error, but also eg. path_find TL destination exceeded
+          // || (firstPartOfMessage.match(/:73,/) && firstPartOfMessage.match(/Internal error/))
         ) {
           // Server is having trouble
           logMsg('Server is having (temp) unrecoverable problems, switch uplink')
