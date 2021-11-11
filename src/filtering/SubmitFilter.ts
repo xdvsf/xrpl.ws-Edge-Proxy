@@ -423,7 +423,7 @@ export default (
       .match(/^(account_.+|ledger|ledger_cl.+|ledger_cu.+|book_of.+|deposit_auth.+|.*path_.+)$/)
     && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
     && (data.messageObject?.command.toLowerCase() !== 'account_tx')
-    && (data.messageObject?.command.toLowerCase() !== 'account_info')
+    // && (data.messageObject?.command.toLowerCase() !== 'account_info')
     && (typeof data.messageObject?.ledger_hash === 'undefined')
     && (typeof data.messageObject?.ledger_index_min === 'undefined')
     && (typeof data.messageObject?.ledger_index_max === 'undefined')
