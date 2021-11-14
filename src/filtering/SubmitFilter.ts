@@ -409,15 +409,15 @@ export default (
     // )
 
     callback.submit(message)
-  // } else if (
-  //   (data.messageObject?.command || '').toLowerCase()
-  //     .match(/tx|lines|account_objects|ledger_data|ledger_entry/)
-  //   && clientState?.uplinkType !== 'submit'
-  //   && clientState?.uplinkType !== 'nonfh'
-  //   && clientState?.uplinkType !== 'reporting'
-  // ) {
-  //   txroutelog('------- >>>>>> --- REPORTING:', data.messageObject?.command, data.messageObject)
-  //   callback.reporting(message)
+  } else if (
+    (data.messageObject?.command || '').toLowerCase()
+      .match(/tx|lines|account_objects|ledger_data|ledger_entry/)
+    && clientState?.uplinkType !== 'submit'
+    && clientState?.uplinkType !== 'nonfh'
+    && clientState?.uplinkType !== 'reporting'
+  ) {
+    txroutelog('------- >>>>>> --- REPORTING:', data.messageObject?.command, data.messageObject)
+    callback.reporting(message)
   } else if (
     (data.messageObject?.command || '').toLowerCase()
       .match(/^(account_.+|ledger|ledger_cl.+|ledger_cu.+|book_of.+|deposit_auth.+|.*path_.+)$/)
