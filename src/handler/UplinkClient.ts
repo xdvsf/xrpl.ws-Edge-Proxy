@@ -45,8 +45,8 @@ class UplinkClient extends WebSocket {
     // super(UplinkServers.basic)
     super(endpoint, {
       headers: {
-        'X-Forwarded-For': clientState.ip.split(',')[0],
-        'X-User': 'xrplcluster/' + clientState.ip
+        'X-Forwarded-For': clientState.ip.split(',')[0]
+        // 'X-User': 'xrplcluster/' + clientState.ip
       }
     })
 
