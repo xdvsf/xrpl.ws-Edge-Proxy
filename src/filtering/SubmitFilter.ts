@@ -399,7 +399,8 @@ export default (
     error_code: 6,
     error_message: `You don't have permission for this command.`,
     generator: 'xrplcluster.com middleware',
-    request: data.messageObject
+    request: data.messageObject,
+    id: data.messageObject?.id
   }
 
   if (data.messageObject?.command.match(/ledger/)) {
