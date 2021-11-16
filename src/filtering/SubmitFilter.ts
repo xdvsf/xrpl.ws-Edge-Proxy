@@ -446,6 +446,8 @@ export default (
     'validator_info',
     'validator_list_sites',
     'validators',
+    'gateway_balances',
+    'account_currencies',
     'ledger_closed'
   ].indexOf(data.messageObject?.command) > -1) {
     // Admin required
@@ -488,15 +490,6 @@ export default (
     && clientState?.uplinkType !== 'nonfh'
     && clientState?.uplinkType !== 'reporting'
   ) {
-    // If decodedTransaction is filled, it's a Submit transaction
-    // Send to Submit (sub proxy) logic
-
-    // log(
-    //   'Relaying filtered (but apparently OK) UplinkClient <<< TRANSACTION >>> Data',
-    //   message,
-    //   decodedTransaction
-    // )
-
     callback.submit(message)
   // } else if (
   //   (data.messageObject?.command || '').toLowerCase()
@@ -527,13 +520,6 @@ export default (
     callback.nonfh(message)
   } else {
     // Send to FH server
-
-    // log(
-    //   'Relaying filtered (but apparently OK) UplinkClient <<< NON-TRANSACTION (SUBMIT) >>> Data',
-    //   message,
-    //   decodedTransaction
-    // )
-
     txroutelog('------- >>>>>> ---    FH:', data.messageObject?.command, data.messageObject)
     callback.send(message)
   }
