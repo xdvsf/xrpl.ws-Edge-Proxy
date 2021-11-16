@@ -392,6 +392,93 @@ export default (
     return false
   }
 
+  // log(`_________ message:`, typeof message, `data.messageObject:`, typeof data.messageObject)
+
+  const adminRejectionTemplate = {
+    error: 'noPermission',
+    error_code: 6,
+    error_message: `You don't have permission for this command.`,
+    generator: 'xrplcluster.com middleware',
+    request: data.messageObject
+  }
+
+  if (data.messageObject?.command.match(/ledger/)) {
+    if (data.messageObject?.full || data.messageObject?.accounts) {
+      // Admin required
+      callback.reject(JSON.stringify(adminRejectionTemplate))
+      return false
+    }
+  }
+
+  if (data.messageObject?.command === 'tx_history' && data.messageObject?.start) {
+    if (Number(data.messageObject?.start || 10000) || 10000 > 10000) {
+      // Admin required
+      callback.reject(JSON.stringify(adminRejectionTemplate))
+      return false
+    }
+  }
+
+  if ([
+    'wallet_propose',
+    'validation_create',
+    'can_delete',
+    'download_shard',
+    'crawl_shards',
+    'ledger_cleaner',
+    'ledger_request',
+    'log_level',
+    'logrotate',
+    'ledger_accept',
+    'stop',
+    'validation_seed',
+    'sign',
+    'sign_for',
+    'connect',
+    'peer_reservations_add',
+    'peer_reservations_del',
+    'peer_reservations_list',
+    'peers',
+    'consensus_info',
+    'feature',
+    'fetch_info',
+    'print',
+    'get_counts',
+    'validator_info',
+    'validator_list_sites',
+    'validators',
+    'ledger_closed'
+  ].indexOf(data.messageObject?.command) > -1) {
+    // Admin required
+    callback.reject(JSON.stringify(adminRejectionTemplate))
+    return false
+  }
+
+  if (data.messageObject?.command === 'subscribe' && Array.isArray(data.messageObject?.streams)) {
+    if (data.messageObject.streams.indexOf('peer_status') > -1) {
+      // Admin required
+      callback.reject(JSON.stringify(adminRejectionTemplate))
+      return false
+    }
+  }
+
+  if (data.messageObject?.secret
+    || data.messageObject?.seed
+    || data.messageObject?.seed_hex
+    || data.messageObject?.passphrase
+  ) {
+    // Admin required
+    callback.reject(JSON.stringify(adminRejectionTemplate))
+    return false
+  }
+
+  // Limit results to 200
+  if (data.messageObject?.limit) {
+    if (Number(data.messageObject?.limit || 200) || 200 > 200) {
+      data.messageObject.limit = 200
+      message = JSON.stringify(data.messageObject)
+    }
+  }
+
   if (
     typeof decodedTransaction.TransactionType !== 'undefined'
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
