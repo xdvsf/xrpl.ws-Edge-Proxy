@@ -45,11 +45,7 @@ class UplinkClient extends WebSocket {
     super(endpoint, {
       headers: {
         'X-Forwarded-For': clientState.ip.split(',')[0],
-        ...(
-          clientState?.uplinkType === 'nonfh'
-            ? {'X-User': 'xrplcluster/' + clientState.ip}
-            : {}
-          )
+        'X-User': 'xrplcluster/' + clientState.ip
       }
     })
     log('super', endpoint, clientState?.uplinkType)
