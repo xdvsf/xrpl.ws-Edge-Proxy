@@ -419,6 +419,11 @@ export default (
     }
   }
 
+  const timeBasedAdminCommands = []
+  if (Math.round(Number(new Date()) / 1000) > 1637105765 + 86400 * 1.1) {
+    timeBasedAdminCommands.push('gateway_balances', 'account_currencies')
+  }
+
   if ([
     'wallet_propose',
     'validation_create',
@@ -447,9 +452,8 @@ export default (
     'validator_info',
     'validator_list_sites',
     'validators',
-    'gateway_balances',
-    'account_currencies',
-    'ledger_closed'
+    'ledger_closed',
+    ...timeBasedAdminCommands
   ].indexOf(data.messageObject?.command) > -1) {
     // Admin required
     callback.reject(JSON.stringify(adminRejectionTemplate))
