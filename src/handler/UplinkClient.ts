@@ -42,13 +42,17 @@ class UplinkClient extends WebSocket {
   private socketDebugMessages = false
 
   constructor (clientState: Client, endpoint: string, proxy: ProxyServer) {
-    // super(UplinkServers.basic)
     super(endpoint, {
       headers: {
-        'X-Forwarded-For': clientState.ip.split(',')[0]
-        // 'X-User': 'xrplcluster/' + clientState.ip
+        'X-Forwarded-For': clientState.ip.split(',')[0],
+        ...(
+          clientState?.uplinkType === 'nonfh'
+            ? {'X-User': 'xrplcluster/' + clientState.ip}
+            : {}
+          )
       }
     })
+    log('super', endpoint, clientState?.uplinkType)
 
     log(`{${clientState!.id}} ` + `Construct new UplinkClient to ${endpoint}`)
     if ((clientState?.request?.url || '').match(/state|debug/)) {
