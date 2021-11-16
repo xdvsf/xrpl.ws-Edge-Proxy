@@ -411,7 +411,7 @@ export default (
   }
 
   if (data.messageObject?.command === 'tx_history' && data.messageObject?.start) {
-    if (Number(data.messageObject?.start || 10000) || 10000 > 10000) {
+    if ((Number(data.messageObject?.start || 10000) || 10000) > 10000) {
       // Admin required
       callback.reject(JSON.stringify(adminRejectionTemplate))
       return false
@@ -471,10 +471,12 @@ export default (
     return false
   }
 
-  // Limit results to 200
+  // Limit results to 100
   if (data.messageObject?.limit) {
-    if (Number(data.messageObject?.limit || 200) || 200 > 200) {
-      data.messageObject.limit = 200
+    const qLimit = 200
+    if ((Number(data.messageObject?.limit || qLimit) || qLimit) > qLimit) {
+      data.messageObject.limit = qLimit
+      log({mo: data.messageObject})
       message = JSON.stringify(data.messageObject)
     }
   }
