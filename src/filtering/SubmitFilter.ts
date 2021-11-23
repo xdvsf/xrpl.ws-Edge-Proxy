@@ -419,10 +419,11 @@ export default (
     }
   }
 
-  const timeBasedAdminCommands = []
-  if (Math.round(Number(new Date()) / 1000) > 1637105765 + 86400 * 1.1) {
-    timeBasedAdminCommands.push('gateway_balances', 'account_currencies')
-  }
+  // const timeBasedAdminCommands = []
+  // if (Math.round(Number(new Date()) / 1000) > 1637105765 + 86400 * 1.1) {
+  //   log('---------------UA', clientState?.headers?.userAgent)
+  //   timeBasedAdminCommands.push()
+  // }
 
   if ([
     'wallet_propose',
@@ -452,8 +453,10 @@ export default (
     'validator_info',
     'validator_list_sites',
     'validators',
-    'ledger_closed',
-    ...timeBasedAdminCommands
+    'ledger_closed'
+    // 'gateway_balances', // Allow, actively being used by apps
+    // 'account_currencies' // Allow, actively being used by apps
+    // ...timeBasedAdminCommands
   ].indexOf(data.messageObject?.command) > -1) {
     // Admin required
     callback.reject(JSON.stringify(adminRejectionTemplate))
@@ -507,7 +510,7 @@ export default (
   //   callback.reporting(message)
   } else if (
     (data.messageObject?.command || '').toLowerCase()
-      .match(/^(account_.+|ledger|ledger_cl.+|ledger_cu.+|book_of.+|deposit_auth.+|.*path_.+)$/)
+      .match(/^(account_.+|ledger|ledger_cl.+|gateway_b.+|ledger_cu.+|book_of.+|deposit_auth.+|.*path_.+)$/)
     && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
     && (data.messageObject?.command.toLowerCase() !== 'account_tx')
     // && (data.messageObject?.command.toLowerCase() !== 'account_info')
