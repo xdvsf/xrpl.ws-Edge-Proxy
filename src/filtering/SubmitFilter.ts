@@ -492,7 +492,10 @@ export default (
   }
 
   if (
-    typeof decodedTransaction.TransactionType !== 'undefined'
+    (
+      typeof decodedTransaction.TransactionType !== 'undefined'
+      || (data.messageObject?.command || '').toLowerCase() === 'fee'
+    )
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
     && clientState?.uplinkType !== 'submit'
     && clientState?.uplinkType !== 'nonfh'
