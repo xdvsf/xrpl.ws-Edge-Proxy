@@ -146,8 +146,25 @@ class UplinkClient extends WebSocket {
       }
 
       const firstPartOfMessage = dataString.slice(0, 1024).trim()
+
       if (firstPartOfMessage.match(/ledger_index|complete_ledgers/)) {
         this.connectionIsSane()
+      }
+
+      if (firstPartOfMessage.match(/"info":.+"build_version":/)) {
+        // server_info response
+        try {
+          // Force fee to 0.0002
+          const dataJson = JSON.parse(dataString)
+          if (dataJson?.result?.info?.validated_ledger?.base_fee_xrp) {
+            Object.assign(dataJson?.result?.info?.validated_ledger, {
+              base_fee_xrp: dataJson.result.info.validated_ledger.base_fee_xrp * 20
+            })
+            dataString = JSON.stringify(dataJson)
+          }
+        } catch (e) {
+          //
+        }
       }
 
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
@@ -181,6 +198,15 @@ class UplinkClient extends WebSocket {
           const newLedgerRange = `32570-${ledgerRangeMatch[2].split('-').reverse()[0].split(',').reverse()[0]}`
           logMsg(`LEDGER RANGE received: ${ledgerRangeMatch[2]}, update to: ${newLedgerRange}`)
           dataString = dataString.replace(ledgerRangeMatch[2], newLedgerRange)
+        } else {
+          if (dataString.match(/(validated_ledgers|complete_ledgers).+?(empty)/)) {
+            logMsg('not synced with the network', endpoint)
+            if (process.env?.LOGCLOSE) {
+              log('C__21 -- Switch uplink')
+            }
+            this.penalty(endpoint, 6)
+            this.close()
+          }
         }
 
         logMsg(`{${clientState!.id}} ` + 'Message from ', endpoint, ':', firstPartOfMessage.slice(0, 256))
