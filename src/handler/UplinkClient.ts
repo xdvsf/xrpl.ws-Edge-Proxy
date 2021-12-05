@@ -167,6 +167,17 @@ class UplinkClient extends WebSocket {
         }
       }
 
+      const replay = (): void => {
+        log('Replay')
+        if ((clientState?.uplinkLastMessages || []).length < 10) {
+          // Only < 10 messages sent this session, immediately dumped
+          clientState.uplinkLastMessages.forEach(lm => {
+            this.send(lm.split(':').slice(1).join(':'))
+          })
+        }
+        return
+      }
+
       if (!firstPartOfMessage.match(/(NEW_CONNECTION_TEST|CONNECTION_PING_TEST|REPLAYED_SUBSCRIPTION)/)) {
         if (
           (firstPartOfMessage.match(/lgrIdxsInvalid/) && firstPartOfMessage.match(/Ledger indexes invalid/))
@@ -180,9 +191,20 @@ class UplinkClient extends WebSocket {
           }
           this.penalty(endpoint, 20)
           this.close()
+          return replay()
         }
 
-        const ledgerRangeMatch = dataString.match(/(validated_ledgers|complete_ledgers).+?([0-9,-]+)/)
+        if (dataString.match(/error/) && dataString.match(/noCurrent|noNetwork|noClosed|tooBusy|amendmentBlocked/)) {
+          logMsg('noCurrent|noNetwork|noClosed|tooBusy|amendmentBlocked', endpoint)
+          if (process.env?.LOGCLOSE) {
+            log('C__22 -- Switch uplink')
+          }
+          this.penalty(endpoint, 6)
+          this.close()
+          return replay()
+        }
+
+        const ledgerRangeMatch = dataString.match(/(validated_ledgers|complete_ledgers)[: "]+([0-9,-]+)/)
         if (ledgerRangeMatch) {
           this.connectionIsSane()
           if (clientState?.uplinkType === 'basic') {
@@ -191,21 +213,23 @@ class UplinkClient extends WebSocket {
               if (process.env?.LOGCLOSE) {
                 log('C__20 -- Switch uplink')
               }
-              this.penalty(endpoint, 2)
+              this.penalty(endpoint, 6)
               this.close()
+              return replay()
             }
           }
           const newLedgerRange = `32570-${ledgerRangeMatch[2].split('-').reverse()[0].split(',').reverse()[0]}`
           logMsg(`LEDGER RANGE received: ${ledgerRangeMatch[2]}, update to: ${newLedgerRange}`)
           dataString = dataString.replace(ledgerRangeMatch[2], newLedgerRange)
         } else {
-          if (dataString.match(/(validated_ledgers|complete_ledgers).+?(empty)/)) {
-            logMsg('not synced with the network', endpoint)
+          if (dataString.match(/(validated_ledgers|complete_ledgers)[: "]+(empty)/)) {
+            logMsg('Not synced with the network', endpoint)
             if (process.env?.LOGCLOSE) {
               log('C__21 -- Switch uplink')
             }
             this.penalty(endpoint, 6)
             this.close()
+            return replay()
           }
         }
 
@@ -466,9 +490,9 @@ class UplinkClient extends WebSocket {
         log('UplinkClient sent message: UPLINK NOT CONNECTED YET. Added to buffer.')
         this?.clientState?.uplinkMessageBuffer.push(message)
         if (Array.isArray(this?.clientState?.uplinkMessageBuffer)) {
-          if (Array(this.clientState!.uplinkMessageBuffer).length > 500) {
+          if (Array(this.clientState!.uplinkMessageBuffer).length > 50) {
             if (process.env?.LOGCLOSE) {
-              log('Clearing ClientState, buffer > 500')
+              log('Clearing ClientState, buffer > 50')
             }
             try {
               if (process.env?.LOGCLOSE) {
