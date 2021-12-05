@@ -29,7 +29,7 @@ const get = () => {
       log('Got config from [ config.json ]')
       configFetchMoment = Math.round(+new Date() / 1000)
     } catch (e) {
-      log(`Config not found (config.json, (${e.message})), trying default config...`)
+      log(`Config not found (config.json, (${(e as any).message})), trying default config...`)
     }
 
     if (typeof config === 'undefined') {
@@ -38,7 +38,7 @@ const get = () => {
         log('Got config from [ config.default.json ]')
         configFetchMoment = Math.round(+new Date() / 1000)
       } catch (e) {
-        log('Cannot read default config either:', e.message)
+        log('Cannot read default config either:', (e as any).message)
         process.exit(1)
       }
     }
@@ -56,7 +56,7 @@ const get = () => {
       config.uplinks.push({type: 'basic', endpoint: 'wss://s2.ripple.com/#basic', healthy: false})
       config.uplinks.push({type: 'priority', endpoint: 'wss://s2.ripple.com/#priority', healthy: false})
     } catch (e) {
-      log('Cannot read JSON from config:', e.message)
+      log('Cannot read JSON from config:', (e as any).message)
       process.exit(1)
     }
   } else {

@@ -77,7 +77,7 @@ const updateAdvisory = async () => {
     return true
   } catch (e) {
     advisoryData.updating = false
-    log('Error updating advisory data', e.message)
+    log('Error updating advisory data', (e as any).message)
 
     return false
   }
@@ -120,7 +120,7 @@ const updateDestinationTagRequired = async () => {
     return true
   } catch (e) {
     destinationTagData.updating = false
-    log('Error destination tag data', e.message)
+    log('Error destination tag data', (e as any).message)
 
     return false
   }
@@ -178,7 +178,7 @@ export default (
                 }, SDLoggerSeverity.INFO)
               }
             } catch (e) {
-              log(`Error decoding SUBMIT transaction hex: ${e.message}`)
+              log(`Error decoding SUBMIT transaction hex: ${(e as any).message}`)
             }
           } else {
             log(`SUBMIT transaction hex is NOT HEX`)
@@ -352,7 +352,7 @@ export default (
       })
     }
 
-    log(`SUBMIT message filtered: ${e.message}`)
+    log(`SUBMIT message filtered: ${(e as any).message}`)
 
     const mockedResponse = {
       result: {
@@ -361,7 +361,7 @@ export default (
         broadcast: false,
         engine_result: 'telLOCAL_ERROR',
         engine_result_code: -399,
-        engine_result_message: 'Local failure: ' + e.message,
+        engine_result_message: 'Local failure: ' + (e as any).message,
         kept: false,
         queued: false
       },
@@ -383,7 +383,7 @@ export default (
       ip: clientState?.ip,
       headers: clientState?.headers,
       transaction: decodedTransaction,
-      reason: e.message,
+      reason: (e as any).message,
       liveNotification
     }, SDLoggerSeverity.WARNING)
 

@@ -63,11 +63,11 @@ const admin = new HttpServer(adminApp, proxy)
 
 const shutdown = async () => {
   return new Promise((resolve, reject) => {
-    server.on('close', () => resolve())
+    server.on('close', () => resolve(null))
     server.on('error', e => reject(e))
     server.close()
 
-    adminServer.on('close', () => resolve())
+    adminServer.on('close', () => resolve(null))
     adminServer.on('error', e => reject(e))
     adminServer.close()
   })

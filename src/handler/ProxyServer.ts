@@ -566,7 +566,7 @@ class ProxyServer {
                 }
               }
             } catch (e) {
-              if (e.message !== 'Unexpected end of JSON input') {
+              if ((e as any).message !== 'Unexpected end of JSON input') {
                 log('X3', e)
               }
             }

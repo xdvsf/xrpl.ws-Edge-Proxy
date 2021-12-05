@@ -346,7 +346,7 @@ class UplinkClient extends WebSocket {
       }
       super.close()
     } catch (e) {
-      log(`{${this.clientState!.id}} ` + '!! WS Close ERROR', e.message)
+      log(`{${this.clientState!.id}} ` + '!! WS Close ERROR', (e as any).message)
     }
   }
 
@@ -456,7 +456,7 @@ class UplinkClient extends WebSocket {
             }
           }
         } catch (e) {
-          log('Error parsing message JSON', e.message)
+          log('Error parsing message JSON', (e as any).message)
         }
       }
 
@@ -477,7 +477,7 @@ class UplinkClient extends WebSocket {
               this.clientState!.socket.close()
               this.clientState!.uplink!.close()
             } catch (e) {
-              log('!!!!! >', e.message)
+              log('!!!!! >', (e as any).message)
             }
           }
         }

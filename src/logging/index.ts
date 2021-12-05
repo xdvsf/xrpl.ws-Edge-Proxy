@@ -97,7 +97,7 @@ const sendLiveNotification = (data: any = {}): void => {
           // .then(r => r.text()).then(debugLog)
         }
       } catch (e) {
-        debugLog('Error sending live notification', e.message)
+        debugLog('Error sending live notification', (e as any).message)
       }
     }
   }
@@ -142,7 +142,7 @@ const Store = async (text: string = '', data: Object = {}, severity:Severity = S
         debugLog(`<STACKDRIVER> Logged: ${text}`)
       }
     } catch (e) {
-      debugLog(`Stackdriver logging error: ${text} - err: ${e.message}`)
+      debugLog(`Stackdriver logging error: ${text} - err: ${(e as any).message}`)
     }
   }
 
