@@ -403,7 +403,7 @@ export default (
     id: data.messageObject?.id
   }
 
-  if (data.messageObject?.command.match(/ledger/)) {
+  if (data.messageObject?.command && data.messageObject?.command.match(/ledger/)) {
     if (data.messageObject?.full || data.messageObject?.accounts) {
       // Admin required
       callback.reject(JSON.stringify(adminRejectionTemplate))
