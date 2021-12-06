@@ -514,7 +514,7 @@ export default (
      callback.reporting(message)
   } else if (
     (data.messageObject?.command || '').toLowerCase()
-      .match(/^(account_.+|ledger|ledger_cl.+|gateway_b.+|ledger_cu.+|book_of.+|deposit_auth.+|.*path_.+)$/)
+      .match(/^(account_.+|ledger|ledger_cl.+|gateway_b.+|ledger_cu.+|deposit_auth.+|.*path_.+)$/) // |book_of.+
     && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
     && (data.messageObject?.command.toLowerCase() !== 'account_tx')
     // && (data.messageObject?.command.toLowerCase() !== 'account_info')
