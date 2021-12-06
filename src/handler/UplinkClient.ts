@@ -10,8 +10,8 @@ import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'
 import {Client} from './types'
 import io from '@pm2/io'
 
-const maxErrorsBeforePenalty = 5
-const penaltyDurationSec = 120
+const maxErrorsBeforePenalty = 4
+const penaltyDurationSec = 60
 
 const maxPongTimeout = 30
 
@@ -295,7 +295,7 @@ class UplinkClient extends WebSocket {
     }
   }
 
-  penalty (endpoint: string, weight = 1): void {
+  penalty (endpoint: string, weight = 2): void {
     // No penalty for reporting mode
     if (this.clientState?.uplinkType !== 'reporting') {
       if (Object.keys(penalties).indexOf(endpoint) < 0) {
