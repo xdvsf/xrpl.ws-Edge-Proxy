@@ -504,8 +504,7 @@ export default (
     callback.submit(message)
    } else if (
      (data.messageObject?.command || '').toLowerCase()
-      //  .match(/tx|lines|account_objects|ledger_data|ledger_entry/)
-       .match(/book_of.+|ledger_data|ledger_entry/)
+     .match(/book_offers|ledger_data|ledger_entry/)
      && clientState?.uplinkType !== 'submit'
      && clientState?.uplinkType !== 'nonfh'
      && clientState?.uplinkType !== 'reporting'
