@@ -504,7 +504,7 @@ export default (
     callback.submit(message)
   //  } else if (
   //    (data.messageObject?.command || '').toLowerCase()
-  //    .match(/book_offers|ledger_data|ledger_entry/)
+  //      .match(/tx|lines|account_objects|ledger_data|ledger_entry/)
   //    && clientState?.uplinkType !== 'submit'
   //    && clientState?.uplinkType !== 'nonfh'
   //    && clientState?.uplinkType !== 'reporting'
@@ -513,7 +513,7 @@ export default (
   //    callback.reporting(message)
   } else if (
     (data.messageObject?.command || '').toLowerCase()
-      .match(/^(account_.+|ledger|ledger_cl.+|gateway_b.+|ledger_cu.+|deposit_auth.+|.*path_.+)$/) // |book_of.+
+      .match(/^(account_.+|ledger|ledger_cl.+|gateway_b.+|ledger_.+|book_of.+|deposit_auth.+|.*path_.+)$/)
     && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
     && (data.messageObject?.command.toLowerCase() !== 'account_tx')
     // && (data.messageObject?.command.toLowerCase() !== 'account_info')
