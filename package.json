@@ -30,6 +30,8 @@
     "test": "test"
   },
   "dependencies": {
+    "@bugsnag/js": "^7.14.1",
+    "@bugsnag/plugin-express": "^7.14.0",
     "@google-cloud/logging": "^8.0.8",
     "@pm2/io": "^4.3.5",
     "@types/cors": "^2.8.8",
