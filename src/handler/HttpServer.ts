@@ -45,9 +45,14 @@ class HttpServer {
               : null
           },
           uplinkLastMessages: c.uplinkLastMessages,
-          ...(['nonfhClient', 'submitClient', 'reportingClient'].reduce((a, clientType) => {
-            const _c = clientType === 'nonfhClient' ? c.nonfhClient
-              : (clientType === 'submitClient' ? c.submitClient : c.reportingClient)
+          ...(['nonfhClient', 'submitClient', 'reportingClient', 'pathClient'].reduce((a, clientType) => {
+            const _c = clientType === 'nonfhClient'
+              ? c.nonfhClient
+              : clientType === 'submitClient'
+                ? c.submitClient
+                : clientType === 'pathClient'
+                  ? c.pathClient
+                  : c.reportingClient
 
             const ccounters = _c && Object.keys(req.query).indexOf('counters') > -1
               ? {messages: _c.counters}

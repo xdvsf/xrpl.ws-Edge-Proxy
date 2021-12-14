@@ -137,6 +137,7 @@ export const Stats = {
 type FilterCallbacks = {
   send: Function
   nonfh: Function
+  path: Function
   reporting: Function
   submit: Function
   reject: Function
@@ -499,6 +500,7 @@ export default (
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
     && clientState?.uplinkType !== 'submit'
     && clientState?.uplinkType !== 'nonfh'
+    && clientState?.uplinkType !== 'path'
     && clientState?.uplinkType !== 'reporting'
   ) {
     callback.submit(message)
@@ -507,10 +509,21 @@ export default (
   //      .match(/tx|lines|account_objects|ledger_data|ledger_entry/)
   //    && clientState?.uplinkType !== 'submit'
   //    && clientState?.uplinkType !== 'nonfh'
+  //    && clientState?.uplinkType !== 'path'
   //    && clientState?.uplinkType !== 'reporting'
   //  ) {
   //    txroutelog('------- >>>>>> --- REPORTING:', data.messageObject?.command, data.messageObject)
   //    callback.reporting(message)
+   } else if (
+     (data.messageObject?.command || '').toLowerCase()
+       .match(/path_/)
+     && clientState?.uplinkType !== 'submit'
+     && clientState?.uplinkType !== 'nonfh'
+     && clientState?.uplinkType !== 'path'
+     && clientState?.uplinkType !== 'reporting'
+   ) {
+     txroutelog('------- >>>>>> --- PATH:', data.messageObject?.command, data.messageObject)
+     callback.path(message)
   } else if (
     (data.messageObject?.command || '').toLowerCase()
       .match(/^(account_.+|ledger|ledger_cl.+|gateway_b.+|ledger_.+|book_of.+|deposit_auth.+|.*path_.+)$/)
@@ -525,6 +538,7 @@ export default (
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
     && clientState?.uplinkType !== 'submit'
     && clientState?.uplinkType !== 'nonfh'
+    && clientState?.uplinkType !== 'path'
     && clientState?.uplinkType !== 'reporting'
   ) {
     txroutelog('------- >>>>>> --- NONFH:', data.messageObject?.command, data.messageObject)

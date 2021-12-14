@@ -14,6 +14,7 @@ type Client = {
   submitClient?: Client
   reportingClient?: Client
   nonfhClient?: Client
+  pathClient?: Client
   uplinkCount: number
   uplinkMessageBuffer: string[]
   uplinkSubscriptions: string[]
