@@ -151,17 +151,28 @@ class UplinkClient extends WebSocket {
         this.connectionIsSane()
       }
 
-      if (firstPartOfMessage.match(/"info":.+"build_version":/)) {
-        // server_info response
+      // "base_fee":"10","median_fee":"5000","minimum_fee":"10","open_ledger_fee":"10"
+      if (firstPartOfMessage.match(/base_fee.+open_ledger_fee.+/)) {
+        // fee response
         try {
-          // Force fee to 0.0002
-          // const dataJson = JSON.parse(dataString)
-          // if (dataJson?.result?.info?.validated_ledger?.base_fee_xrp) {
-          //   Object.assign(dataJson?.result?.info?.validated_ledger, {
-          //     base_fee_xrp: dataJson.result.info.validated_ledger.base_fee_xrp * 20
-          //   })
-          //   dataString = JSON.stringify(dataJson)
-          // }
+          // Fee Padding
+          const dataJson = JSON.parse(dataString)
+          if (dataJson?.result?.drops?.base_fee) {
+            dataJson.result.drops.base_fee = Number(dataJson.result.drops.base_fee) < 15
+              ? String(15)
+              : dataJson.result.drops.base_fee
+          }
+          if (dataJson?.result?.drops?.minimum_fee) {
+            dataJson.result.drops.minimum_fee = Number(dataJson.result.drops.minimum_fee) < 15
+              ? String(15)
+              : dataJson.result.drops.minimum_fee
+          }
+          if (dataJson?.result?.drops?.open_ledger_fee) {
+            dataJson.result.drops.open_ledger_fee = Number(dataJson.result.drops.open_ledger_fee) < 15
+              ? String(15)
+              : dataJson.result.drops.open_ledger_fee
+          }
+          dataString = JSON.stringify(dataJson)
         } catch (e) {
           //
         }
