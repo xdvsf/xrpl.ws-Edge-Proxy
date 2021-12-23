@@ -155,13 +155,13 @@ class UplinkClient extends WebSocket {
         // server_info response
         try {
           // Force fee to 0.0002
-          const dataJson = JSON.parse(dataString)
-          if (dataJson?.result?.info?.validated_ledger?.base_fee_xrp) {
-            Object.assign(dataJson?.result?.info?.validated_ledger, {
-              base_fee_xrp: dataJson.result.info.validated_ledger.base_fee_xrp * 20
-            })
-            dataString = JSON.stringify(dataJson)
-          }
+          // const dataJson = JSON.parse(dataString)
+          // if (dataJson?.result?.info?.validated_ledger?.base_fee_xrp) {
+          //   Object.assign(dataJson?.result?.info?.validated_ledger, {
+          //     base_fee_xrp: dataJson.result.info.validated_ledger.base_fee_xrp * 20
+          //   })
+          //   dataString = JSON.stringify(dataJson)
+          // }
         } catch (e) {
           //
         }
