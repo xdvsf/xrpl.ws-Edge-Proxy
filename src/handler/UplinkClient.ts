@@ -19,6 +19,9 @@ const metrics = {
   messages: io.counter({name: '# messages'})
 }
 
+const feeHistoryLength = 50
+const feeHistoryOpenLedger: string[] = []
+
 type penaltyData = {
   count: number
   last: number
@@ -167,14 +170,42 @@ class UplinkClient extends WebSocket {
               ? String(15)
               : dataJson.result.drops.minimum_fee
           }
+
+          if (dataJson?.result?.drops?.open_ledger_fee) {
+            feeHistoryOpenLedger.push(dataJson.result.drops.open_ledger_fee)
+            if (feeHistoryOpenLedger.length > feeHistoryLength) {
+              feeHistoryOpenLedger.splice(0, feeHistoryOpenLedger.length - feeHistoryLength)
+            }
+            const feeHistoryOpenLedgerSorted = new Uint32Array([...feeHistoryOpenLedger.map(v => Number(v))]).sort()
+            const feeHistoryOpenLedgerSelected = Math.floor(feeHistoryOpenLedgerSorted.length / 2)
+            const feeHistoryOpenLedgerCommon = String(feeHistoryOpenLedgerSorted[feeHistoryOpenLedgerSelected])
+
+            // Overrule open ledger fee with ~median
+            if (Number(dataJson.result.drops.open_ledger_fee) > Number(feeHistoryOpenLedgerCommon)) {
+              log('Overrule open_ledger_fee using ~median, from:',
+                dataJson.result.drops.open_ledger_fee, 'to:', feeHistoryOpenLedgerCommon)
+
+              dataJson.result.drops.open_ledger_fee = feeHistoryOpenLedgerCommon
+            }
+
+            // log({
+            //   thisFee: dataJson.result.drops.open_ledger_fee,
+            //   feeHistoryOpenLedger,
+            //   feeHistoryOpenLedgerSorted,
+            //   feeHistoryOpenLedgerSelected,
+            //   feeHistoryOpenLedgerCommon
+            // })
+          }
+
           if (dataJson?.result?.drops?.open_ledger_fee) {
             dataJson.result.drops.open_ledger_fee = Number(dataJson.result.drops.open_ledger_fee) < 15
               ? String(15)
               : dataJson.result.drops.open_ledger_fee
           }
+
           dataString = JSON.stringify(dataJson)
         } catch (e) {
-          //
+          log('Fee postprocessing error', (e as any).message)
         }
       }
 
