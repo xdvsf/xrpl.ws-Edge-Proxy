@@ -10,6 +10,8 @@ import {Severity as SDLoggerSeverity, Store as SDLogger} from '../logging/'
 import {Client} from './types'
 import io from '@pm2/io'
 
+const minFeeDrops = 10
+
 const maxErrorsBeforePenalty = 4
 const penaltyDurationSec = 60
 
@@ -19,7 +21,7 @@ const metrics = {
   messages: io.counter({name: '# messages'})
 }
 
-const feeHistoryLength = 50
+const feeHistoryLength = 500
 const feeHistoryOpenLedger: string[] = []
 
 type penaltyData = {
@@ -161,13 +163,14 @@ class UplinkClient extends WebSocket {
           // Fee Padding
           const dataJson = JSON.parse(dataString)
           if (dataJson?.result?.drops?.base_fee) {
-            dataJson.result.drops.base_fee = Number(dataJson.result.drops.base_fee) < 15
-              ? String(15)
+            dataJson.result.drops.base_fee = Number(dataJson.result.drops.base_fee) < minFeeDrops
+              ? String(minFeeDrops)
               : dataJson.result.drops.base_fee
           }
+
           if (dataJson?.result?.drops?.minimum_fee) {
-            dataJson.result.drops.minimum_fee = Number(dataJson.result.drops.minimum_fee) < 15
-              ? String(15)
+            dataJson.result.drops.minimum_fee = Number(dataJson.result.drops.minimum_fee) < minFeeDrops
+              ? String(minFeeDrops)
               : dataJson.result.drops.minimum_fee
           }
 
@@ -198,8 +201,8 @@ class UplinkClient extends WebSocket {
           }
 
           if (dataJson?.result?.drops?.open_ledger_fee) {
-            dataJson.result.drops.open_ledger_fee = Number(dataJson.result.drops.open_ledger_fee) < 15
-              ? String(15)
+            dataJson.result.drops.open_ledger_fee = Number(dataJson.result.drops.open_ledger_fee) < minFeeDrops
+              ? String(minFeeDrops)
               : dataJson.result.drops.open_ledger_fee
           }
 
