@@ -156,6 +156,59 @@ class UplinkClient extends WebSocket {
         this.connectionIsSane()
       }
 
+      // Replace fake _id values for remapping of values, see SubmitFilter assignFakeResponseValue()
+      if (firstPartOfMessage.match(/__fake_value/)) {
+        try {
+          const dataJson = JSON.parse(dataString)
+          log(`\n\n{START:assignFakeResponseValue}\n`)
+
+          let fake_field_key = ''
+          let fake_field_value = ''
+
+          if (dataJson?.id) {
+            if (typeof dataJson?.id === 'object' && dataJson.id !== null) {
+              //
+              log('ID is object, revert to original value')
+              ;[fake_field_key, fake_field_value] = [
+                (dataJson?.id?.__fake_value || '').split(':')[0],
+                (dataJson?.id?.__fake_value || '').split(':').slice(1).join(':')
+              ]
+              dataJson.id = dataJson?.id?.__original_value
+            }
+            if (typeof dataJson?.id === 'string') {
+              if (dataJson.id.slice(0, 13) === '__fake_value_') {
+                log('There was no id, just the fake value')
+                ;[fake_field_key, fake_field_value] = [
+                  dataJson.id.slice(13).split(':')[0],
+                  dataJson.id.slice(13).split(':').slice(1).join(':')
+                ]
+                delete dataJson.id
+              } else {
+                log('There was an existing string id, revert to original string')
+                const [originalId, fakeValue] = dataJson.id.split('|__fake_value_')
+                dataJson.id = originalId
+                ;[fake_field_key, fake_field_value] = [
+                  fakeValue.split(':')[0],
+                  fakeValue.split(':').slice(1).join(':')
+                ]
+              }
+            }
+          }
+
+          log({fake_field_key, fake_field_value})
+          if (fake_field_key !== '') {
+            if (typeof dataJson.result === 'object' && dataJson.result !== null) {
+              dataJson.result[fake_field_key] = fake_field_value
+            }
+          }
+
+          log(`\n{END:assignFakeResponseValue}\n\n\n`)
+          dataString = JSON.stringify(dataJson)
+        } catch (e) {
+          log('assignFakeResponseValue postprocessing error', (e as any).message)
+        }
+      }
+
       // "base_fee":"10","median_fee":"5000","minimum_fee":"10","open_ledger_fee":"10"
       if (firstPartOfMessage.match(/base_fee.+open_ledger_fee.+/)) {
         // fee response

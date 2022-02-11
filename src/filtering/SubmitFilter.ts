@@ -126,6 +126,30 @@ const updateDestinationTagRequired = async () => {
   }
 }
 
+type Command = {
+  id ?: any
+}
+
+const assignFakeResponseValue = (messageObject: Command, key: string, value: string) => {
+  if (typeof messageObject?.id === 'undefined') {
+    messageObject.id = '__fake_value_' + key + ':' + value
+  } else if (typeof messageObject?.id !== 'object') {
+    if (typeof messageObject?.id === 'string') {
+      messageObject.id += '|__fake_value_' + key + ':' + value
+    } else{
+      messageObject.id = {
+        __fake_value: key + ':' + value,
+        __original_value: messageObject?.id
+      }
+    }
+  } else if (typeof messageObject?.id === 'object' && typeof messageObject?.id !== null) {
+    messageObject.id = {
+      __fake_value: key + ':' + value,
+      __original_value: messageObject?.id
+    }
+  }
+}
+
 export const Stats = {
   filteredCount: 0,
   filteredByIp,
@@ -417,6 +441,22 @@ export default (
       // Admin required
       callback.reject(JSON.stringify(adminRejectionTemplate))
       return false
+    }
+  }
+
+  if (data.messageObject?.command === 'account_lines') {
+    if (data.messageObject?.account === data.messageObject?.peer) {
+      // TL to self doens't exist, prevent paging if issuer:
+
+      // ASSIGN PASSHTROUGH RESPONSE VALUE IN ID TO REVERT IN RESPONSE
+
+      assignFakeResponseValue(data.messageObject, 'account', data.messageObject.account)
+
+      data.messageObject.account = 'rrrrrrrrrrrrrrrrrrrrBZbvji'
+      // log(`\n\n\n\n\n\n\n\n`)
+      log({REPLACE_ACCOUNT_AND_PEER_ACCOUT_LINES: data.messageObject})
+      message = JSON.stringify(data.messageObject)
+      // log(`\n\n\n\n\n\n\n\n`)
     }
   }
 
