@@ -131,20 +131,15 @@ type Command = {
 }
 
 const assignFakeResponseValue = (messageObject: Command, key: string, value: string) => {
-  if (typeof messageObject?.id === 'undefined') {
-    messageObject.id = '__fake_value_' + key + ':' + value
-  } else if (typeof messageObject?.id !== 'object') {
-    if (typeof messageObject?.id === 'string') {
-      messageObject.id += '|__fake_value_' + key + ':' + value
-    } else{
-      messageObject.id = {
-        __fake_value: key + ':' + value,
-        __original_value: messageObject?.id
-      }
-    }
-  } else if (typeof messageObject?.id === 'object' && typeof messageObject?.id !== null) {
+  // Refactor
+  if (typeof messageObject?.id === 'object' && messageObject?.id !== null && messageObject.id?.__fake_values) {
+    // Assign
+    messageObject.id['__fake_value_' + key] = value
+  } else {
+    // Wrap
     messageObject.id = {
-      __fake_value: key + ':' + value,
+      __fake_values: true,
+      ['__fake_value_' + key]: value,
       __original_value: messageObject?.id
     }
   }

@@ -164,46 +164,21 @@ class UplinkClient extends WebSocket {
           const dataJson = JSON.parse(dataString)
           log(`\n\n{START:assignFakeResponseValue}\n`)
 
-          let fake_field_key = ''
-          let fake_field_value = ''
-
           if (dataJson?.id) {
             if (typeof dataJson?.id === 'object' && dataJson.id !== null) {
-              //
-              log('ID is object, revert to original value')
-              ;[fake_field_key, fake_field_value] = [
-                (dataJson?.id?.__fake_value || '').split(':')[0],
-                (dataJson?.id?.__fake_value || '').split(':').slice(1).join(':')
-              ]
-              dataJson.id = dataJson?.id?.__original_value
-              assignedFakeResponseValue = true
-            }
-            if (typeof dataJson?.id === 'string') {
-              if (dataJson.id.slice(0, 13) === '__fake_value_') {
-                log('There was no id, just the fake value')
-                ;[fake_field_key, fake_field_value] = [
-                  dataJson.id.slice(13).split(':')[0],
-                  dataJson.id.slice(13).split(':').slice(1).join(':')
-                ]
-                delete dataJson.id
-                assignedFakeResponseValue = true
-              } else {
-                log('There was an existing string id, revert to original string')
-                const [originalId, fakeValue] = dataJson.id.split('|__fake_value_')
-                dataJson.id = originalId
-                ;[fake_field_key, fake_field_value] = [
-                  fakeValue.split(':')[0],
-                  fakeValue.split(':').slice(1).join(':')
-                ]
-                assignedFakeResponseValue = true
+              if (typeof dataJson.id?.__fake_values !== 'undefined') {
+                Object.keys(dataJson.id).forEach(idKey => {
+                  if (idKey.slice(0, 13) === '__fake_value_') {
+                    log(`Replace:`, idKey.slice(13), dataJson.id[idKey])
+                    if (typeof dataJson?.result !== 'undefined') {
+                      dataJson.result[idKey.slice(13)] = dataJson.id[idKey]
+                      delete dataJson.id[idKey]
+                      assignedFakeResponseValue = true
+                    }
+                  }
+                })
+                dataJson.id = dataJson.id.__original_value
               }
-            }
-          }
-
-          log({fake_field_key, fake_field_value})
-          if (fake_field_key !== '') {
-            if (typeof dataJson.result === 'object' && dataJson.result !== null) {
-              dataJson.result[fake_field_key] = fake_field_value
             }
           }
 
