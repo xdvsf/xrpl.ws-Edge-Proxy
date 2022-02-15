@@ -156,6 +156,8 @@ class UplinkClient extends WebSocket {
         this.connectionIsSane()
       }
 
+      let assignedFakeResponseValue = false
+
       // Replace fake _id values for remapping of values, see SubmitFilter assignFakeResponseValue()
       if (firstPartOfMessage.match(/__fake_value/)) {
         try {
@@ -174,6 +176,7 @@ class UplinkClient extends WebSocket {
                 (dataJson?.id?.__fake_value || '').split(':').slice(1).join(':')
               ]
               dataJson.id = dataJson?.id?.__original_value
+              assignedFakeResponseValue = true
             }
             if (typeof dataJson?.id === 'string') {
               if (dataJson.id.slice(0, 13) === '__fake_value_') {
@@ -183,6 +186,7 @@ class UplinkClient extends WebSocket {
                   dataJson.id.slice(13).split(':').slice(1).join(':')
                 ]
                 delete dataJson.id
+                assignedFakeResponseValue = true
               } else {
                 log('There was an existing string id, revert to original string')
                 const [originalId, fakeValue] = dataJson.id.split('|__fake_value_')
@@ -191,6 +195,7 @@ class UplinkClient extends WebSocket {
                   fakeValue.split(':')[0],
                   fakeValue.split(':').slice(1).join(':')
                 ]
+                assignedFakeResponseValue = true
               }
             }
           }
@@ -206,6 +211,17 @@ class UplinkClient extends WebSocket {
           dataString = JSON.stringify(dataJson)
         } catch (e) {
           log('assignFakeResponseValue postprocessing error', (e as any).message)
+        }
+      }
+
+      if (clientState.uplinkType === 'nonfh' && assignedFakeResponseValue) {
+        // Non FH, possibly assigned non FH node perference _nodepref
+        const dataJson = JSON.parse(dataString)
+        if (dataJson?.result?._nodepref && dataJson.result._nodepref === 'nonfh') {
+          if (typeof dataJson?.result?.marker === 'string') {
+            dataJson.result.marker += '|NONFH'
+            dataString = JSON.stringify(dataJson)
+          }
         }
       }
 

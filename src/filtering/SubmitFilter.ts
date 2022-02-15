@@ -567,14 +567,22 @@ export default (
   } else if (
     (data.messageObject?.command || '').toLowerCase()
       .match(/^(account_.+|ledger|ledger_cl.+|gateway_b.+|ledger_.+|book_of.+|deposit_auth.+|.*path_.+)$/)
-    && ([undefined, 'current', 'validated'].indexOf(data.messageObject?.ledger_index) > -1)
+    && (
+      ([undefined, 'current', 'validated', 'closed'].indexOf(data.messageObject?.ledger_index) > -1)
+      ||
+      (typeof data.messageObject?.marker === 'string' && data.messageObject?.marker.match(/NONFH/)) // Force node
+    )
     && (data.messageObject?.command.toLowerCase() !== 'account_tx')
     // && (data.messageObject?.command.toLowerCase() !== 'account_info')
     && (typeof data.messageObject?.ledger_hash === 'undefined')
     && (typeof data.messageObject?.ledger_index_min === 'undefined')
     && (typeof data.messageObject?.ledger_index_max === 'undefined')
     && (typeof data.messageObject?.forward === 'undefined')
-    && (typeof data.messageObject?.marker === 'undefined')
+    && (
+      typeof data.messageObject?.marker === 'undefined'
+      ||
+      (typeof data.messageObject?.marker === 'string' && data.messageObject?.marker.match(/NONFH/)) // Force node
+    )
     // Don't apply logic if connection is already of submit type (prevent endless recursion)
     && clientState?.uplinkType !== 'submit'
     && clientState?.uplinkType !== 'nonfh'
@@ -582,6 +590,19 @@ export default (
     && clientState?.uplinkType !== 'reporting'
   ) {
     txroutelog('------- >>>>>> --- NONFH:', data.messageObject?.command, data.messageObject)
+
+    assignFakeResponseValue(data.messageObject, '_nodepref', 'nonfh') // Force follow up execution to NONFH
+    message = JSON.stringify(data.messageObject)
+
+    // Replace the NONFH marker before sending to rippled
+    if (typeof data.messageObject?.marker === 'string') {
+      const marker = data.messageObject.marker as string
+      if (marker.match(/NONFH/)) {
+        data.messageObject.marker = marker.split('|NONFH')[0]
+        message = JSON.stringify(data.messageObject)
+      }
+    }
+
     callback.nonfh(message)
   } else {
     // Send to FH server
